@@ -1,0 +1,42 @@
+export const palette = {
+  primaryPink: '#F58FA3',
+  primaryPinkDark: '#E06E86',
+  softPink: '#FAD7DF',
+  babyBlue: '#A9D8F5',
+  babyBlueDark: '#6FB3E0',
+  lavender: '#C9B7F4',
+  lavenderDark: '#A88DE8',
+  mint: '#B9E6D3',
+  mintDark: '#7FCBAA',
+  cream: '#FFF8F0',
+  warmWhite: '#FFFCF8',
+  peach: '#F8C6B4',
+  peachDark: '#EFA688',
+  softYellow: '#FFE69A',
+  softYellowDark: '#F2C94C',
+  text: '#5B5260',
+  textSecondary: '#8B8290',
+  textFaint: '#B3AAB8',
+  white: '#FFFFFF',
+  border: '#F0E4E8',
+  danger: '#E2637A',
+  success: '#7FCBAA',
+} as const;
+
+export const categoryColors = {
+  feeding: { bg: '#FFF3E0', accent: '#F2A65A', text: '#8A5A22' },
+  diaper: { bg: '#E9F7EF', accent: palette.mintDark, text: '#2F6B4F' },
+  sleep: { bg: '#EFE9FB', accent: palette.lavenderDark, text: '#5B4491' },
+  growth: { bg: '#E4F3FC', accent: palette.babyBlueDark, text: '#2E6C93' },
+  milestone: { bg: '#FFF0DC', accent: palette.softYellowDark, text: '#8A6D1C' },
+  health: { bg: '#FDE9EC', accent: palette.primaryPink, text: '#A34A5C' },
+  appointment: { bg: '#F0EAFB', accent: palette.lavenderDark, text: '#5B4491' },
+  bath: { bg: '#E4F3FC', accent: palette.babyBlueDark, text: '#2E6C93' },
+  activity: { bg: '#FDEEE6', accent: palette.peachDark, text: '#9A5B3C' },
+  memory: { bg: '#FDE9F1', accent: palette.primaryPink, text: '#A34A5C' },
+  note: { bg: '#FFF8E5', accent: palette.softYellowDark, text: '#8A6D1C' },
+  reminder: { bg: '#FDE9EC', accent: palette.primaryPink, text: '#A34A5C' },
+  family: { bg: '#EFE9FB', accent: palette.lavenderDark, text: '#5B4491' },
+} as const;
+
+export type CategoryKey = keyof typeof categoryColors;
