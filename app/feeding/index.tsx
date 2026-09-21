@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
+import { IllustrationBadge } from '../../src/components/ui/IllustrationBadge';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { FormSheet } from '../../src/components/ui/FormSheet';
@@ -207,6 +208,10 @@ export default function FeedingScreen() {
 
         {type === 'solid' && (
           <>
+            <View style={styles.solidFoodHeader}>
+              <IllustrationBadge name="solidFood" size={56} />
+              <Text style={styles.solidFoodLabel}>First foods & solids</Text>
+            </View>
             <FormField label="Food name" value={foodName} onChangeText={setFoodName} placeholder="e.g. Mashed banana" />
             <FormField label="Amount" value={amount} onChangeText={setAmount} placeholder="e.g. 2 tbsp" optional />
             <FormField label="Reaction" value={reaction} onChangeText={setReaction} placeholder="Loved it, mild rash..." optional />
@@ -236,6 +241,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: palette.textSecondary,
     marginBottom: spacing.sm,
+  },
+  solidFoodHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  solidFoodLabel: {
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    color: palette.text,
+    flex: 1,
   },
   listHeader: {
     flexDirection: 'row',
