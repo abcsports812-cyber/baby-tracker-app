@@ -39,6 +39,7 @@ export const categoryColors = {
   family: { bg: '#EFE9FB', accent: palette.lavenderDark, text: '#5B4491' },
   sound: { bg: '#E8F1FB', accent: '#5B8DEF', text: '#2E5590' },
   parenting: { bg: '#FDE9F1', accent: palette.primaryPink, text: '#A34A5C' },
+  teeth: { bg: '#EAF6F1', accent: '#5FB8A3', text: '#2E6E5C' },
 } as const;
 
 export type CategoryKey = keyof typeof categoryColors;

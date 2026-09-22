@@ -7,6 +7,8 @@ import type {
   MilestoneCategory,
   NoteCategory,
   ReminderCategory,
+  TeethingSymptom,
+  ToothStatus,
 } from '../types/models';
 
 export function activityLabel(kind: ActivityKind, custom?: string): string {
@@ -87,5 +89,22 @@ export const noteCategoryLabel: Record<NoteCategory, string> = {
   general: 'General',
   feeding: 'Feeding',
   sleep: 'Sleep',
+  other: 'Other',
+};
+
+export const toothStatusLabel: Record<ToothStatus, string> = {
+  notErupted: 'Not erupted',
+  emerging: 'Emerging',
+  erupted: 'Erupted',
+  lost: 'Lost',
+};
+
+export const teethingSymptomLabel: Record<TeethingSymptom, string> = {
+  drooling: 'Drooling',
+  fussiness: 'Fussiness',
+  gumSwelling: 'Gum swelling',
+  lowFever: 'Low fever',
+  chewing: 'Chewing on things',
+  disruptedSleep: 'Disrupted sleep',
   other: 'Other',
 };

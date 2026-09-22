@@ -12,8 +12,10 @@ import {
   useGrowthStore,
   useMilestoneStore,
   useSleepStore,
+  useToothStore,
 } from '../../src/store';
 import { last7Days, toISODate } from '../../src/lib/date';
+import { TOOTH_CHART } from '../../src/lib/teeth';
 import { categoryColors, fontSize, palette, spacing } from '../../src/theme';
 
 function weekLabel(d: Date) {
@@ -27,6 +29,7 @@ export default function ReportsScreen() {
   const growth = useGrowthStore((s) => s.items);
   const milestones = useMilestoneStore((s) => s.items);
   const activities = useActivityStore((s) => s.items);
+  const teeth = useToothStore((s) => s.items);
 
   const days = useMemo(() => last7Days(), []);
 
@@ -71,8 +74,10 @@ export default function ReportsScreen() {
   );
 
   const completedMilestones = milestones.filter((m) => m.completed).length;
+  const eruptedTeeth = teeth.filter((t) => t.status === 'erupted').length;
 
-  const hasAnyData = babyFeeding.length || diaper.length || sleep.length || growth.length || activities.length || milestones.some((m) => m.completed);
+  const hasAnyData =
+    babyFeeding.length || diaper.length || sleep.length || growth.length || activities.length || milestones.some((m) => m.completed) || teeth.length > 0;
 
   return (
     <Screen>
@@ -134,6 +139,16 @@ export default function ReportsScreen() {
           <Text style={styles.sectionTitle}>Milestones</Text>
           <Text style={styles.milestoneCount}>{completedMilestones}</Text>
           <Text style={styles.milestoneLabel}>achieved so far</Text>
+        </Card>
+      )}
+
+      {teeth.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Teeth</Text>
+          <Text style={[styles.milestoneCount, { color: categoryColors.teeth.accent }]}>
+            {eruptedTeeth} of {TOOTH_CHART.length}
+          </Text>
+          <Text style={styles.milestoneLabel}>teeth erupted</Text>
         </Card>
       )}
     </Screen>

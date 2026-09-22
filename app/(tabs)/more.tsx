@@ -43,6 +43,8 @@ export default function MoreScreen() {
         <SettingsRow icon="images" label="Journal" onPress={() => router.push('/journal')} />
         <Divider />
         <SettingsRow icon="alarm" label="Reminders" onPress={() => router.push('/reminders')} />
+        <Divider />
+        <SettingsRow icon="happy" label="Teeth" onPress={() => router.push('/teeth')} />
       </Section>
 
       <Section title="Preferences">

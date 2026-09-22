@@ -250,6 +250,40 @@ export interface JournalNote {
   updatedAt: string;
 }
 
+export type ToothPosition = 'upperLeft' | 'upperRight' | 'lowerLeft' | 'lowerRight';
+export type ToothType = 'centralIncisor' | 'lateralIncisor' | 'canine' | 'firstMolar' | 'secondMolar';
+export type ToothStatus = 'notErupted' | 'emerging' | 'erupted' | 'lost';
+export type TeethingSymptom =
+  | 'drooling'
+  | 'fussiness'
+  | 'gumSwelling'
+  | 'lowFever'
+  | 'chewing'
+  | 'disruptedSleep'
+  | 'other';
+
+/** One record per tooth *slot* in the fixed 20-tooth primary dentition
+ * chart (see src/lib/teeth.ts for the slot definitions). The store only
+ * ever holds a record for a slot the parent has actually touched — a
+ * slot with no record renders as its default `notErupted` state, so a
+ * baby with no teeth yet never writes 20 near-empty rows. */
+export interface ToothRecord {
+  id: ID; // matches a TOOTH_CHART slot id, e.g. "upperLeft-centralIncisor"
+  position: ToothPosition;
+  type: ToothType;
+  status: ToothStatus;
+  eruptionDate?: string; // ISO date
+  lossDate?: string; // ISO date
+  symptoms?: TeethingSymptom[];
+  notes?: string;
+  photoUri?: string;
+  /** Optional cross-reference to an existing Milestone — never auto-created
+   * or auto-derived, only set when the user explicitly links one. */
+  relatedMilestoneId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type WeightUnit = 'kg' | 'lb';
 export type HeightUnit = 'cm' | 'in';
 

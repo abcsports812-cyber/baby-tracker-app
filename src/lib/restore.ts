@@ -17,6 +17,7 @@ import {
   useSettingsStore,
   useSleepStore,
   useSoundMixStore,
+  useToothStore,
   useVaccinationStore,
 } from '../store';
 import { cancelReminderNotification, scheduleReminderNotification } from './notifications';
@@ -98,6 +99,8 @@ export async function applyBackup(backup: BackupFile): Promise<void> {
   useSoundMixStore.getState().setAll(data.stores.soundMixes.map(withId));
   useFavoriteSoundsStore.getState().set(data.stores.favoriteSounds);
   useSavedGuidesStore.getState().set(data.stores.savedGuides);
+  // Absent on a pre-Teeth-Tracker backup — restores as an empty collection.
+  useToothStore.getState().setAll((data.stores.teeth ?? []).map(withId));
 
   // Vaccinations/Appointments/Reminders are restored without a
   // notificationId first (never carry the backup's stripped/absent one),

@@ -12,10 +12,12 @@ import {
   useMilestoneStore,
   useNoteStore,
   useSleepStore,
+  useToothStore,
   useVaccinationStore,
 } from '../store';
 import { formatDuration, formatTime, isSameDay } from './date';
 import { activityLabel, babyCareLabel } from './labels';
+import { toothSlotLabel } from './teeth';
 
 export interface TimelineEvent {
   id: string;
@@ -38,6 +40,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
   const activities = useActivityStore((s) => s.items);
   const memories = useMemoryStore((s) => s.items);
   const notes = useNoteStore((s) => s.items);
+  const teeth = useToothStore((s) => s.items);
 
   return useMemo(() => {
     const events: TimelineEvent[] = [];
@@ -158,13 +161,36 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
       events.push({ id: n.id, category: 'note', icon: 'document-text', title: n.title, subtitle: n.body, time: n.date });
     });
 
+    teeth.forEach((t) => {
+      if (t.eruptionDate && isSameDay(t.eruptionDate, date)) {
+        events.push({
+          id: `${t.id}-erupted`,
+          category: 'teeth',
+          icon: 'happy-outline',
+          title: `${toothSlotLabel(t)} erupted`,
+          subtitle: t.status === 'emerging' ? 'Emerging' : 'Erupted',
+          time: t.eruptionDate,
+        });
+      }
+      if (t.lossDate && isSameDay(t.lossDate, date)) {
+        events.push({
+          id: `${t.id}-lost`,
+          category: 'teeth',
+          icon: 'happy-outline',
+          title: `${toothSlotLabel(t)} lost`,
+          subtitle: 'Tooth lost',
+          time: t.lossDate,
+        });
+      }
+    });
+
     events.sort((a, b) => {
       const diff = new Date(a.time).getTime() - new Date(b.time).getTime();
       return sort === 'asc' ? diff : -diff;
     });
 
     return events;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, date, sort]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, date, sort]);
 }
 
 export function eventTimeLabel(event: TimelineEvent): string {
@@ -183,6 +209,7 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
   const activities = useActivityStore((s) => s.items);
   const memories = useMemoryStore((s) => s.items);
   const notes = useNoteStore((s) => s.items);
+  const teeth = useToothStore((s) => s.items);
 
   return useMemo(() => {
     const year = monthDate.getFullYear();
@@ -208,9 +235,13 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
     activities.forEach((a) => mark(a.dateTime, 'activity'));
     memories.forEach((m) => mark(m.date, 'memory'));
     notes.forEach((n) => mark(n.date, 'note'));
+    teeth.forEach((t) => {
+      if (t.eruptionDate) mark(t.eruptionDate, 'teeth');
+      if (t.lossDate) mark(t.lossDate, 'teeth');
+    });
 
     const result = new Map<string, CategoryKey[]>();
     map.forEach((set, key) => result.set(key, Array.from(set)));
     return result;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, monthDate]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, monthDate]);
 }

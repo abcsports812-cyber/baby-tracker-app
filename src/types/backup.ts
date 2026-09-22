@@ -15,6 +15,7 @@ import type {
   Reminder,
   SleepRecord,
   SoundMix,
+  ToothRecord,
   Vaccination,
 } from './models';
 
@@ -45,6 +46,12 @@ export interface BackupStores {
   soundMixes: SoundMix[];
   favoriteSounds: string[];
   savedGuides: string[];
+  /** Added after the initial backup format shipped. Optional so a backup
+   * file created before Teeth Tracker existed — which has no `teeth` key
+   * at all — still passes validation; missing/absent is always treated
+   * as an empty collection, never a validation failure. See
+   * `validateBackup`'s OPTIONAL_STORE_ARRAY_KEYS handling. */
+  teeth?: ToothRecord[];
 }
 
 /** Settings worth restoring. Deliberately excludes `onboardingCompleted`

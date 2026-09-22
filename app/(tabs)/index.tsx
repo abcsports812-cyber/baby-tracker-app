@@ -121,6 +121,7 @@ export default function HomeScreen() {
           <QuickActionButton category="growth" icon="trending-up" label="Growth" onPress={() => router.push('/growth?add=1')} />
           <QuickActionButton category="milestone" icon="star" label="Milestone" onPress={() => router.push('/milestones?add=1')} />
           <QuickActionButton category="memory" icon="images" label="Journal" onPress={() => router.push('/journal')} />
+          <QuickActionButton category="teeth" icon="happy-outline" label="Teeth" onPress={() => router.push('/teeth')} />
         </View>
       </ScrollView>
 

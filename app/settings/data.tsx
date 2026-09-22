@@ -20,6 +20,7 @@ import {
   useNoteStore,
   useReminderStore,
   useSleepStore,
+  useToothStore,
   useVaccinationStore,
 } from '../../src/store';
 import { cancelReminderNotification } from '../../src/lib/notifications';
@@ -47,6 +48,7 @@ const SUMMARY_ROWS: { key: keyof BackupSummary['counts']; label: string }[] = [
   { key: 'caregivers', label: 'Family & caregivers' },
   { key: 'notes', label: 'Notes' },
   { key: 'soundMixes', label: 'Sound mixes' },
+  { key: 'teeth', label: 'Teeth records' },
 ];
 
 function RestorePreviewModal({
@@ -128,6 +130,7 @@ export default function DataSettingsScreen() {
   const memories = useMemoryStore();
   const caregivers = useCaregiverStore();
   const notes = useNoteStore();
+  const teeth = useToothStore();
 
   const totalRecords =
     feeding.items.length +
@@ -143,7 +146,8 @@ export default function DataSettingsScreen() {
     activities.items.length +
     memories.items.length +
     caregivers.items.length +
-    notes.items.length;
+    notes.items.length +
+    teeth.items.length;
 
   const clearAll = async () => {
     for (const r of reminders.items) await cancelReminderNotification(r.notificationId);
@@ -163,6 +167,7 @@ export default function DataSettingsScreen() {
     memories.setAll([]);
     caregivers.setAll([]);
     notes.setAll([]);
+    teeth.setAll([]);
 
     setConfirmOpen(false);
     showToast('All tracking data cleared', 'trash');

@@ -19,6 +19,7 @@ import type {
   Reminder,
   SleepRecord,
   SoundMix,
+  ToothRecord,
   Vaccination,
 } from '../types/models';
 
@@ -47,6 +48,7 @@ export const useActivityStore = createCollectionStore<ActivityRecord>('activitie
 export const useMemoryStore = createCollectionStore<Memory>('memories');
 export const useCaregiverStore = createCollectionStore<Caregiver>('caregivers');
 export const useNoteStore = createCollectionStore<JournalNote>('notes');
+export const useToothStore = createCollectionStore<ToothRecord>('teeth');
 
 export const useFavoriteSoundsStore = createSingletonStore<string[]>('favoriteSounds', []);
 export const useRecentSoundsStore = createSingletonStore<RecentSoundEntry[]>('recentSounds', []);

@@ -19,6 +19,7 @@ import {
   useSettingsStore,
   useSleepStore,
   useSoundMixStore,
+  useToothStore,
   useVaccinationStore,
 } from '../store';
 import { BACKUP_FORMAT_VERSION, type BackupFile, type BackupStores } from '../types/backup';
@@ -54,6 +55,7 @@ export function buildBackup(): BackupFile {
     soundMixes: useSoundMixStore.getState().items,
     favoriteSounds: useFavoriteSoundsStore.getState().value,
     savedGuides: useSavedGuidesStore.getState().value,
+    teeth: useToothStore.getState().items,
     // recentSounds / recentGuides are recency caches, intentionally excluded — see BackupStores.
   };
 
@@ -103,6 +105,14 @@ const STORE_ARRAY_KEYS: (keyof BackupStores)[] = [
   'favoriteSounds',
   'savedGuides',
 ];
+
+/** Store keys added after the original backup format shipped. Unlike
+ * STORE_ARRAY_KEYS, these are validated only when present — an older
+ * backup file that predates the key entirely must still restore
+ * successfully, with the key treated as an empty collection, never as
+ * a validation failure. Any future new store should be added here
+ * first, not to STORE_ARRAY_KEYS, to preserve backward compatibility. */
+const OPTIONAL_STORE_ARRAY_KEYS: (keyof BackupStores)[] = ['teeth'];
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -183,6 +193,17 @@ export function validateBackup(raw: unknown): BackupValidationResult {
     }
   }
 
+  // A backup made before a given optional key existed simply won't have
+  // it at all — that must be accepted, not rejected. Only reject when the
+  // key is present but shaped wrong.
+  for (const key of OPTIONAL_STORE_ARRAY_KEYS) {
+    const value = (stores as Record<string, unknown>)[key];
+    if (value === undefined) continue;
+    if (!Array.isArray(value) || value.some((entry) => !isPlainObject(entry) || typeof entry.id !== 'string')) {
+      return { valid: false, error: `This backup file is corrupted (invalid ${key} data).` };
+    }
+  }
+
   return {
     valid: true,
     backup: raw as unknown as BackupFile,
@@ -209,6 +230,7 @@ export interface BackupSummary {
     caregivers: number;
     notes: number;
     soundMixes: number;
+    teeth: number;
   };
 }
 
@@ -237,6 +259,8 @@ export function getBackupSummary(backup: BackupFile): BackupSummary {
       caregivers: s.caregivers.length,
       notes: s.notes.length,
       soundMixes: s.soundMixes.length,
+      // Absent on a pre-Teeth-Tracker backup — treated as zero, not an error.
+      teeth: (s.teeth ?? []).length,
     },
   };
 }

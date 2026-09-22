@@ -30,6 +30,7 @@ const MORE_TRACKERS: ModuleTile[] = [
   { key: 'activities', label: 'Activities', route: '/activities' },
   { key: 'memories', label: 'Journal', route: '/journal' },
   { key: 'reminders', label: 'Reminders', route: '/reminders' },
+  { key: 'teeth', label: 'Teeth', route: '/teeth' },
 ];
 
 function Tile({ tile }: { tile: ModuleTile }) {

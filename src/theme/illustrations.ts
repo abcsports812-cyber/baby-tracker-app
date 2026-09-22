@@ -23,7 +23,8 @@ export type IllustrationKey =
   | 'solidFood'
   | 'sounds'
   | 'guides'
-  | 'pumping';
+  | 'pumping'
+  | 'teeth';
 
 // All 18 approved illustrations are integrated here. "activities" is
 // intentionally left without a source: the supplied 19th image (a baby
@@ -79,4 +80,7 @@ export const illustrationIconFallback: Record<IllustrationKey, IconFallback> = {
   sounds: { icon: 'headset', category: 'sound' },
   guides: { icon: 'book-outline', category: 'growth' },
   pumping: { icon: 'timer-outline', category: 'feeding' },
+  // No bespoke illustration exists for Teeth yet — same situation as
+  // 'activities' — so it falls back to a themed icon badge.
+  teeth: { icon: 'happy-outline', category: 'teeth' },
 };
