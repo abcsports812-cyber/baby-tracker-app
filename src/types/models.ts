@@ -196,12 +196,20 @@ export interface ActivityRecord {
   updatedAt: string;
 }
 
+/** Shared category vocabulary for the Journal (notes + memories) system. */
+export type JournalCategory = 'everyday' | 'milestone' | 'first' | 'health' | 'family' | 'specialDay';
+
 export interface Memory {
   id: ID;
   title: string;
   date: string; // ISO date
   caption?: string;
   photoUri?: string;
+  category?: JournalCategory;
+  favorite?: boolean;
+  /** Optional cross-reference to an existing Milestone — never auto-created
+   * or auto-derived, only set when the user explicitly links one. */
+  relatedMilestoneId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -222,7 +230,10 @@ export interface Caregiver {
   updatedAt: string;
 }
 
-export type NoteCategory = 'general' | 'feeding' | 'sleep' | 'health' | 'milestone' | 'other';
+// A superset of JournalCategory: 'general' | 'feeding' | 'sleep' | 'other' are
+// kept only so any already-persisted note keeps rendering its category label
+// correctly. New entries only offer JournalCategory's values going forward.
+export type NoteCategory = 'general' | 'feeding' | 'sleep' | 'other' | JournalCategory;
 
 export interface JournalNote {
   id: ID;
@@ -230,6 +241,11 @@ export interface JournalNote {
   body: string;
   date: string; // ISO date
   category: NoteCategory;
+  favorite?: boolean;
+  photoUri?: string;
+  /** Optional cross-reference to an existing Milestone — never auto-created
+   * or auto-derived, only set when the user explicitly links one. */
+  relatedMilestoneId?: string;
   createdAt: string;
   updatedAt: string;
 }

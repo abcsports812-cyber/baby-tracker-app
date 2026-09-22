@@ -3,6 +3,7 @@ import type {
   BabyCareActivity,
   CaregiverRelationship,
   HealthRecordType,
+  JournalCategory,
   MilestoneCategory,
   NoteCategory,
   ReminderCategory,
@@ -70,11 +71,21 @@ export const caregiverRelationshipLabel: Record<CaregiverRelationship, string> =
   other: 'Other',
 };
 
+export const journalCategoryLabel: Record<JournalCategory, string> = {
+  everyday: 'Everyday',
+  milestone: 'Milestone',
+  first: 'First',
+  health: 'Health',
+  family: 'Family',
+  specialDay: 'Special Day',
+};
+
+// Covers every NoteCategory value, including the legacy-only ones kept
+// solely so an already-persisted note's category never renders blank.
 export const noteCategoryLabel: Record<NoteCategory, string> = {
+  ...journalCategoryLabel,
   general: 'General',
   feeding: 'Feeding',
   sleep: 'Sleep',
-  health: 'Health',
-  milestone: 'Milestone',
   other: 'Other',
 };

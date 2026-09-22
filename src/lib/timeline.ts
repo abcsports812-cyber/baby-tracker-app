@@ -10,6 +10,7 @@ import {
   useHealthRecordStore,
   useMemoryStore,
   useMilestoneStore,
+  useNoteStore,
   useSleepStore,
   useVaccinationStore,
 } from '../store';
@@ -36,6 +37,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
   const babyCare = useBabyCareStore((s) => s.items);
   const activities = useActivityStore((s) => s.items);
   const memories = useMemoryStore((s) => s.items);
+  const notes = useNoteStore((s) => s.items);
 
   return useMemo(() => {
     const events: TimelineEvent[] = [];
@@ -152,13 +154,17 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
       events.push({ id: m.id, category: 'memory', icon: 'images', title: m.title, subtitle: m.caption, time: m.date });
     });
 
+    notes.filter((n) => isSameDay(n.date, date)).forEach((n) => {
+      events.push({ id: n.id, category: 'note', icon: 'document-text', title: n.title, subtitle: n.body, time: n.date });
+    });
+
     events.sort((a, b) => {
       const diff = new Date(a.time).getTime() - new Date(b.time).getTime();
       return sort === 'asc' ? diff : -diff;
     });
 
     return events;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, date, sort]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, date, sort]);
 }
 
 export function eventTimeLabel(event: TimelineEvent): string {
@@ -176,6 +182,7 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
   const babyCare = useBabyCareStore((s) => s.items);
   const activities = useActivityStore((s) => s.items);
   const memories = useMemoryStore((s) => s.items);
+  const notes = useNoteStore((s) => s.items);
 
   return useMemo(() => {
     const year = monthDate.getFullYear();
@@ -200,9 +207,10 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
     babyCare.forEach((b) => mark(b.dateTime, 'bath'));
     activities.forEach((a) => mark(a.dateTime, 'activity'));
     memories.forEach((m) => mark(m.date, 'memory'));
+    notes.forEach((n) => mark(n.date, 'note'));
 
     const result = new Map<string, CategoryKey[]>();
     map.forEach((set, key) => result.set(key, Array.from(set)));
     return result;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, monthDate]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, monthDate]);
 }

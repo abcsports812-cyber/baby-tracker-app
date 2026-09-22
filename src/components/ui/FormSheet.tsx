@@ -73,6 +73,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
+    // Bounds the sheet to its already-90%-capped wrapper and actually
+    // clips/contains overflow instead of letting it grow past that bound
+    // on web — combined with the ScrollView's `flexShrink`/`minHeight: 0`
+    // below, a form taller than the available space scrolls internally
+    // instead of pushing the footer's Save button off-screen.
+    maxHeight: '100%',
+    overflow: 'hidden',
   },
   handle: {
     width: 40,
@@ -103,6 +110,8 @@ const styles = StyleSheet.create({
   },
   body: {
     flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
   },
   footer: {
     paddingTop: spacing.md,

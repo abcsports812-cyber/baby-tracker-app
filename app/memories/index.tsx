@@ -2,30 +2,34 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
 import { Button } from '../../src/components/ui/Button';
 import { FormSheet } from '../../src/components/ui/FormSheet';
 import { FormField } from '../../src/components/ui/FormField';
+import { ChipSelect } from '../../src/components/ui/ChipSelect';
 import { DateTimeField } from '../../src/components/ui/DateTimeField';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
-import { useMemoryStore } from '../../src/store';
+import { useMemoryStore, useMilestoneStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate } from '../../src/lib/date';
+import { journalCategoryLabel } from '../../src/lib/labels';
 import { showToast } from '../../src/components/ui/Toast';
 import { fontSize, palette, radius, shadow, spacing } from '../../src/theme';
-import type { Memory } from '../../src/types/models';
+import type { JournalCategory, Memory } from '../../src/types/models';
 
 const TILE_SIZE = (Dimensions.get('window').width - spacing.xl * 2 - spacing.md) / 2;
+const NO_MILESTONE = 'none';
 
 export default function MemoriesScreen() {
   const items = useMemoryStore((s) => s.items);
   const add = useMemoryStore((s) => s.add);
   const update = useMemoryStore((s) => s.update);
   const remove = useMemoryStore((s) => s.remove);
+  const milestones = useMilestoneStore((s) => s.items);
 
   const [sheetOpen, setSheetOpen] = useAutoOpenAdd();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,6 +38,9 @@ export default function MemoriesScreen() {
   const [date, setDate] = useState(new Date());
   const [caption, setCaption] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [category, setCategory] = useState<JournalCategory>('everyday');
+  const [favorite, setFavorite] = useState(false);
+  const [relatedMilestoneId, setRelatedMilestoneId] = useState(NO_MILESTONE);
 
   const sorted = useMemo(() => [...items].sort((a, b) => b.date.localeCompare(a.date)), [items]);
 
@@ -50,6 +57,9 @@ export default function MemoriesScreen() {
     setDate(new Date());
     setCaption('');
     setPhotoUri(undefined);
+    setCategory('everyday');
+    setFavorite(false);
+    setRelatedMilestoneId(NO_MILESTONE);
     setSheetOpen(true);
   };
 
@@ -59,7 +69,14 @@ export default function MemoriesScreen() {
     setDate(new Date(m.date));
     setCaption(m.caption ?? '');
     setPhotoUri(m.photoUri);
+    setCategory(m.category ?? 'everyday');
+    setFavorite(m.favorite ?? false);
+    setRelatedMilestoneId(m.relatedMilestoneId ?? NO_MILESTONE);
     setSheetOpen(true);
+  };
+
+  const toggleFavorite = (m: Memory) => {
+    update(m.id, { favorite: !m.favorite, updatedAt: nowIso() });
   };
 
   const save = () => {
@@ -69,6 +86,9 @@ export default function MemoriesScreen() {
       date: date.toISOString().slice(0, 10),
       caption: caption.trim() || undefined,
       photoUri,
+      category,
+      favorite,
+      relatedMilestoneId: relatedMilestoneId === NO_MILESTONE ? undefined : relatedMilestoneId,
     };
     if (editingId) {
       update(editingId, { ...payload, updatedAt: now });
@@ -108,13 +128,21 @@ export default function MemoriesScreen() {
                   <Ionicons name="images" size={28} color={palette.primaryPinkDark} />
                 </View>
               )}
+              <Pressable
+                onPress={() => toggleFavorite(m)}
+                hitSlop={8}
+                style={styles.favoriteBtn}
+                accessibilityLabel={m.favorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Ionicons name={m.favorite ? 'heart' : 'heart-outline'} size={14} color={palette.white} />
+              </Pressable>
               <View style={styles.tileFooter}>
                 <Text style={styles.tileTitle} numberOfLines={1}>
                   {m.title}
                 </Text>
                 <Text style={styles.tileDate}>{formatDate(m.date)}</Text>
               </View>
-              <Pressable onPress={() => setDeleteId(m.id)} hitSlop={8} style={styles.deleteBtn}>
+              <Pressable onPress={() => setDeleteId(m.id)} hitSlop={8} style={styles.deleteBtn} accessibilityLabel="Delete memory">
                 <Ionicons name="trash-outline" size={14} color={palette.white} />
               </Pressable>
             </Pressable>
@@ -135,7 +163,45 @@ export default function MemoriesScreen() {
         </Pressable>
         <FormField label="Title" value={title} onChangeText={setTitle} placeholder="e.g. First trip to the park" />
         <DateTimeField label="Date" value={date} onChange={setDate} mode="date" maximumDate={new Date()} />
+        <ChipSelect
+          label="Category"
+          value={category}
+          onChange={setCategory}
+          options={(Object.keys(journalCategoryLabel) as JournalCategory[]).map((c) => ({ value: c, label: journalCategoryLabel[c] }))}
+        />
         <FormField label="Caption" value={caption} onChangeText={setCaption} multiline optional />
+
+        <Pressable style={styles.favoriteToggle} onPress={() => setFavorite((v) => !v)}>
+          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={18} color={palette.primaryPinkDark} />
+          <Text style={styles.favoriteLabel}>Favorite</Text>
+        </Pressable>
+
+        {milestones.length > 0 && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <Text style={styles.milestoneLabel}>Related milestone (optional)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.milestoneRow}>
+                <Pressable
+                  onPress={() => setRelatedMilestoneId(NO_MILESTONE)}
+                  style={[styles.milestoneChip, relatedMilestoneId === NO_MILESTONE && styles.milestoneChipActive]}
+                >
+                  <Text style={[styles.milestoneChipLabel, relatedMilestoneId === NO_MILESTONE && styles.milestoneChipLabelActive]}>None</Text>
+                </Pressable>
+                {milestones.map((mi) => (
+                  <Pressable
+                    key={mi.id}
+                    onPress={() => setRelatedMilestoneId(mi.id)}
+                    style={[styles.milestoneChip, relatedMilestoneId === mi.id && styles.milestoneChipActive]}
+                  >
+                    <Text style={[styles.milestoneChipLabel, relatedMilestoneId === mi.id && styles.milestoneChipLabelActive]} numberOfLines={1}>
+                      {mi.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
       </FormSheet>
 
       <ConfirmDialog
@@ -187,6 +253,14 @@ const styles = StyleSheet.create({
     color: palette.textFaint,
     marginTop: 1,
   },
+  favoriteBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: 'rgba(91,82,96,0.45)',
+    borderRadius: 12,
+    padding: 5,
+  },
   deleteBtn: {
     position: 'absolute',
     top: spacing.sm,
@@ -218,5 +292,53 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: palette.primaryPinkDark,
     fontWeight: '600',
+  },
+  favoriteToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: palette.white,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    marginBottom: spacing.lg,
+  },
+  favoriteLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  milestoneLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: spacing.sm,
+  },
+  milestoneRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingRight: spacing.xl,
+  },
+  milestoneChip: {
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.border,
+    maxWidth: 160,
+  },
+  milestoneChipActive: {
+    backgroundColor: palette.primaryPink,
+    borderColor: palette.primaryPink,
+  },
+  milestoneChipLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: palette.textSecondary,
+  },
+  milestoneChipLabelActive: {
+    color: palette.white,
   },
 });

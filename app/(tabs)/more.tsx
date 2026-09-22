@@ -40,9 +40,7 @@ export default function MoreScreen() {
       </Section>
 
       <Section title="Keep track">
-        <SettingsRow icon="document-text" label="Notes & journal" onPress={() => router.push('/notes')} />
-        <Divider />
-        <SettingsRow icon="images" label="Memories" onPress={() => router.push('/memories')} />
+        <SettingsRow icon="images" label="Journal" onPress={() => router.push('/journal')} />
         <Divider />
         <SettingsRow icon="alarm" label="Reminders" onPress={() => router.push('/reminders')} />
       </Section>

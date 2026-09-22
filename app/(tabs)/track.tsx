@@ -28,8 +28,7 @@ const MORE_TRACKERS: ModuleTile[] = [
   { key: 'doctor', label: 'Appointments', route: '/appointments' },
   { key: 'babyCare', label: 'Baby Care', route: '/babycare' },
   { key: 'activities', label: 'Activities', route: '/activities' },
-  { key: 'memories', label: 'Memories', route: '/memories' },
-  { key: 'notes', label: 'Notes', route: '/notes' },
+  { key: 'memories', label: 'Journal', route: '/journal' },
   { key: 'reminders', label: 'Reminders', route: '/reminders' },
 ];
 

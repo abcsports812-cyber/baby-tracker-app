@@ -1,38 +1,40 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Screen } from '../../src/components/ui/Screen';
-import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
-import { Button } from '../../src/components/ui/Button';
-import { FormSheet } from '../../src/components/ui/FormSheet';
-import { FormField } from '../../src/components/ui/FormField';
-import { ChipSelect } from '../../src/components/ui/ChipSelect';
-import { DateTimeField } from '../../src/components/ui/DateTimeField';
-import { EmptyState } from '../../src/components/ui/EmptyState';
-import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
-import { useMilestoneStore, useNoteStore } from '../../src/store';
-import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
-import { generateId, nowIso } from '../../src/lib/id';
-import { formatDate } from '../../src/lib/date';
-import { journalCategoryLabel, noteCategoryLabel } from '../../src/lib/labels';
-import { showToast } from '../../src/components/ui/Toast';
-import { fontSize, palette, radius, shadow, spacing } from '../../src/theme';
-import type { JournalCategory, JournalNote } from '../../src/types/models';
+import { Screen } from '../../../src/components/ui/Screen';
+import { ModuleHeader } from '../../../src/components/ui/ModuleHeader';
+import { Card } from '../../../src/components/ui/Card';
+import { Button } from '../../../src/components/ui/Button';
+import { FormSheet } from '../../../src/components/ui/FormSheet';
+import { FormField } from '../../../src/components/ui/FormField';
+import { ChipSelect } from '../../../src/components/ui/ChipSelect';
+import { DateTimeField } from '../../../src/components/ui/DateTimeField';
+import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
+import { useMilestoneStore, useNoteStore } from '../../../src/store';
+import { nowIso } from '../../../src/lib/id';
+import { formatDate } from '../../../src/lib/date';
+import { journalCategoryLabel, noteCategoryLabel } from '../../../src/lib/labels';
+import { showToast } from '../../../src/components/ui/Toast';
+import { categoryColors, fontSize, palette, radius, spacing } from '../../../src/theme';
+import type { JournalCategory } from '../../../src/types/models';
 
 const NO_MILESTONE = 'none';
 
-export default function NotesScreen() {
-  const items = useNoteStore((s) => s.items);
-  const add = useNoteStore((s) => s.add);
+export default function NoteDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const notes = useNoteStore((s) => s.items);
   const update = useNoteStore((s) => s.update);
   const remove = useNoteStore((s) => s.remove);
   const milestones = useMilestoneStore((s) => s.items);
 
-  const [sheetOpen, setSheetOpen] = useAutoOpenAdd();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const note = notes.find((n) => n.id === id);
+  const relatedMilestone = note?.relatedMilestoneId ? milestones.find((m) => m.id === note.relatedMilestoneId) : undefined;
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [date, setDate] = useState(new Date());
@@ -41,7 +43,27 @@ export default function NotesScreen() {
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [relatedMilestoneId, setRelatedMilestoneId] = useState(NO_MILESTONE);
 
-  const sorted = useMemo(() => [...items].sort((a, b) => b.date.localeCompare(a.date)), [items]);
+  if (!note) {
+    return (
+      <Screen>
+        <ModuleHeader illustration="notes" title="Note" />
+        <Text style={styles.notFound}>This note could not be found.</Text>
+      </Screen>
+    );
+  }
+
+  const colors = categoryColors.note;
+
+  const openEdit = () => {
+    setTitle(note.title);
+    setBody(note.body);
+    setDate(new Date(note.date));
+    setCategory((note.category in journalCategoryLabel ? note.category : 'everyday') as JournalCategory);
+    setFavorite(note.favorite ?? false);
+    setPhotoUri(note.photoUri);
+    setRelatedMilestoneId(note.relatedMilestoneId ?? NO_MILESTONE);
+    setSheetOpen(true);
+  };
 
   const pickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,40 +72,12 @@ export default function NotesScreen() {
     if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
   };
 
-  const openAdd = () => {
-    setEditingId(null);
-    setTitle('');
-    setBody('');
-    setDate(new Date());
-    setCategory('everyday');
-    setFavorite(false);
-    setPhotoUri(undefined);
-    setRelatedMilestoneId(NO_MILESTONE);
-    setSheetOpen(true);
-  };
-
-  const openEdit = (n: JournalNote) => {
-    setEditingId(n.id);
-    setTitle(n.title);
-    setBody(n.body);
-    setDate(new Date(n.date));
-    // Legacy notes may carry a pre-Journal category value not offered as a
-    // chip anymore — fall back to 'everyday' in the form without altering
-    // the stored value unless the user actually changes it and saves.
-    setCategory((n.category in journalCategoryLabel ? n.category : 'everyday') as JournalCategory);
-    setFavorite(n.favorite ?? false);
-    setPhotoUri(n.photoUri);
-    setRelatedMilestoneId(n.relatedMilestoneId ?? NO_MILESTONE);
-    setSheetOpen(true);
-  };
-
-  const toggleFavorite = (n: JournalNote) => {
-    update(n.id, { favorite: !n.favorite, updatedAt: nowIso() });
+  const toggleFavorite = () => {
+    update(note.id, { favorite: !note.favorite, updatedAt: nowIso() });
   };
 
   const save = () => {
-    const now = nowIso();
-    const payload = {
+    update(note.id, {
       title: title.trim() || 'Untitled note',
       body: body.trim(),
       date: date.toISOString().slice(0, 10),
@@ -91,56 +85,50 @@ export default function NotesScreen() {
       favorite,
       photoUri,
       relatedMilestoneId: relatedMilestoneId === NO_MILESTONE ? undefined : relatedMilestoneId,
-    };
-    if (editingId) {
-      update(editingId, { ...payload, updatedAt: now });
-      showToast('Note updated', 'checkmark-circle');
-    } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
-      showToast('Note saved', 'document-text');
-    }
+      updatedAt: nowIso(),
+    });
+    showToast('Note updated', 'checkmark-circle');
     setSheetOpen(false);
   };
 
   return (
     <Screen>
-      <ModuleHeader illustration="notes" title="Notes & Journal" subtitle="A private space for your thoughts" />
+      <ModuleHeader
+        illustration="notes"
+        title="Journal Entry"
+        rightAction={
+          <Pressable onPress={toggleFavorite} hitSlop={10} accessibilityLabel={note.favorite ? 'Remove from favorites' : 'Add to favorites'}>
+            <Ionicons name={note.favorite ? 'heart' : 'heart-outline'} size={22} color={note.favorite ? palette.primaryPink : palette.textFaint} />
+          </Pressable>
+        }
+      />
 
-      <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>{items.length} note{items.length === 1 ? '' : 's'}</Text>
-        <Button label="New note" icon="add" size="sm" onPress={openAdd} />
+      {note.photoUri && <Image source={{ uri: note.photoUri }} style={styles.photo} contentFit="cover" />}
+
+      <Card>
+        <Text style={styles.title}>{note.title}</Text>
+        <View style={styles.metaRow}>
+          <View style={[styles.categoryPill, { backgroundColor: colors.bg }]}>
+            <Text style={[styles.categoryPillLabel, { color: colors.text }]}>{noteCategoryLabel[note.category]}</Text>
+          </View>
+          <Text style={styles.date}>{formatDate(note.date)}</Text>
+        </View>
+        <Text style={styles.body}>{note.body}</Text>
+
+        {relatedMilestone && (
+          <Pressable style={styles.milestoneRow} onPress={() => router.push('/milestones')}>
+            <Ionicons name="star" size={16} color={categoryColors.milestone.accent} />
+            <Text style={styles.milestoneText}>Related milestone: {relatedMilestone.title}</Text>
+          </Pressable>
+        )}
+      </Card>
+
+      <View style={styles.actionRow}>
+        <Button label="Edit" icon="pencil" variant="secondary" onPress={openEdit} style={{ flex: 1 }} />
+        <Button label="Delete" icon="trash" variant="danger" onPress={() => setDeleteOpen(true)} style={{ flex: 1 }} />
       </View>
 
-      {sorted.length === 0 ? (
-        <EmptyState illustration="notes" title="No notes yet" message="Jot down thoughts, questions or sweet moments." ctaLabel="Write a note" onPressCta={openAdd} />
-      ) : (
-        sorted.map((n) => (
-          <Pressable key={n.id} onPress={() => openEdit(n)} style={[styles.noteCard, shadow.soft]}>
-            <View style={styles.noteHeader}>
-              <Text style={styles.noteTitle} numberOfLines={1}>
-                {n.title}
-              </Text>
-              <View style={styles.noteHeaderActions}>
-                <Pressable onPress={() => toggleFavorite(n)} hitSlop={10} accessibilityLabel={n.favorite ? 'Remove from favorites' : 'Add to favorites'}>
-                  <Ionicons name={n.favorite ? 'heart' : 'heart-outline'} size={16} color={n.favorite ? palette.primaryPink : palette.textFaint} />
-                </Pressable>
-                <Pressable onPress={() => setDeleteId(n.id)} hitSlop={10} accessibilityLabel="Delete note">
-                  <Ionicons name="trash-outline" size={15} color={palette.textFaint} />
-                </Pressable>
-              </View>
-            </View>
-            <Text style={styles.noteBody} numberOfLines={3}>
-              {n.body}
-            </Text>
-            <View style={styles.noteFooter}>
-              <Text style={styles.noteMeta}>{noteCategoryLabel[n.category]}</Text>
-              <Text style={styles.noteMeta}>{formatDate(n.date)}</Text>
-            </View>
-          </Pressable>
-        ))
-      )}
-
-      <FormSheet visible={sheetOpen} title={editingId ? 'Edit note' : 'New note'} onClose={() => setSheetOpen(false)} onSave={save}>
+      <FormSheet visible={sheetOpen} title="Edit note" onClose={() => setSheetOpen(false)} onSave={save}>
         <FormField label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Things to ask the doctor" />
         <DateTimeField label="Date" value={date} onChange={setDate} mode="date" maximumDate={new Date()} />
         <ChipSelect
@@ -171,7 +159,7 @@ export default function NotesScreen() {
           <View style={{ marginBottom: spacing.lg }}>
             <Text style={styles.milestoneLabel}>Related milestone (optional)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.milestoneRow}>
+              <View style={styles.milestonePickerRow}>
                 <Pressable
                   onPress={() => setRelatedMilestoneId(NO_MILESTONE)}
                   style={[styles.milestoneChip, relatedMilestoneId === NO_MILESTONE && styles.milestoneChipActive]}
@@ -196,12 +184,13 @@ export default function NotesScreen() {
       </FormSheet>
 
       <ConfirmDialog
-        visible={!!deleteId}
+        visible={deleteOpen}
         title="Delete this note?"
-        onCancel={() => setDeleteId(null)}
+        onCancel={() => setDeleteOpen(false)}
         onConfirm={() => {
-          if (deleteId) remove(deleteId);
-          setDeleteId(null);
+          remove(note.id);
+          setDeleteOpen(false);
+          router.back();
         }}
       />
     </Screen>
@@ -209,55 +198,67 @@ export default function NotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+  notFound: {
+    fontSize: fontSize.md,
+    color: palette.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
-  listTitle: {
-    fontSize: fontSize.lg,
+  photo: {
+    width: '100%',
+    height: 220,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+  },
+  title: {
+    fontSize: fontSize.xl,
     fontWeight: '800',
     color: palette.text,
   },
-  noteCard: {
-    backgroundColor: palette.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  noteHeaderActions: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  noteTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    color: palette.text,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  noteBody: {
-    fontSize: fontSize.sm,
-    color: palette.textSecondary,
-    lineHeight: 19,
-  },
-  noteFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  noteMeta: {
+  categoryPill: {
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+  },
+  categoryPillLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  date: {
     fontSize: fontSize.xs,
     color: palette.textFaint,
     fontWeight: '600',
+  },
+  body: {
+    fontSize: fontSize.md,
+    color: palette.text,
+    lineHeight: 22,
+  },
+  milestoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  milestoneText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
   },
   favoriteToggle: {
     flexDirection: 'row',
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     marginBottom: spacing.sm,
   },
-  milestoneRow: {
+  milestonePickerRow: {
     flexDirection: 'row',
     gap: spacing.sm,
     paddingRight: spacing.xl,
