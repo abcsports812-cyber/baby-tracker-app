@@ -102,7 +102,10 @@ export interface Vaccination {
   vaccineName: string;
   date: string; // ISO date
   doseNotes?: string;
+  doseNumber?: string; // e.g. "Dose 1 of 3", "Booster"
   nextDueDate?: string;
+  reminderEnabled?: boolean;
+  notificationId?: string;
   createdAt: string;
   updatedAt: string;
 }
