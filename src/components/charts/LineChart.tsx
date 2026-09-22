@@ -27,7 +27,10 @@ export function LineChart({ data, color = palette.primaryPink, unit = '', height
 
   const points = data.map((d, i) => {
     const x = data.length === 1 ? width / 2 : paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
-    const y = height - paddingY - ((d.value - min) / range) * (height - paddingY * 2);
+    // A single point has no meaningful range to plot against — center it
+    // vertically instead of letting the min/max fallback pin it to the
+    // baseline, which read as broken rather than intentional.
+    const y = data.length === 1 ? height / 2 : height - paddingY - ((d.value - min) / range) * (height - paddingY * 2);
     return { x, y, ...d };
   });
 
