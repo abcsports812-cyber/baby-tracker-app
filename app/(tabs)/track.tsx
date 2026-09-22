@@ -22,6 +22,7 @@ const CORE_TRACKERS: ModuleTile[] = [
 ];
 
 const MORE_TRACKERS: ModuleTile[] = [
+  { key: 'pumping', label: 'Pumping', route: '/pumping' },
   { key: 'milestones', label: 'Milestones', route: '/milestones' },
   { key: 'health', label: 'Health', route: '/health' },
   { key: 'doctor', label: 'Appointments', route: '/appointments' },

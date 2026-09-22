@@ -43,6 +43,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
     feeding.filter((f) => isSameDay(f.startTime, date)).forEach((f) => {
       let title = 'Feeding';
       let subtitle: string | undefined;
+      let icon: TimelineEvent['icon'] = 'nutrition';
       if (f.type === 'breast') {
         title = 'Breastfeeding';
         subtitle = [f.side ? `${f.side} side` : undefined, f.durationMin ? formatDuration(f.durationMin) : undefined]
@@ -51,11 +52,23 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
       } else if (f.type === 'bottle') {
         title = 'Bottle';
         subtitle = [f.amountMl ? `${f.amountMl} ml` : undefined, f.milkType].filter(Boolean).join(' · ');
+      } else if (f.type === 'pump') {
+        // A pump session is expressed milk, not a baby-feeding event —
+        // labeled distinctly so it's never mistaken for one in the timeline.
+        icon = 'timer-outline';
+        if (f.durationMin == null) {
+          title = 'Pumping (in progress)';
+        } else {
+          title = 'Pumping session';
+          subtitle = [f.side ? f.side[0].toUpperCase() + f.side.slice(1) : undefined, f.amountMl != null ? `${f.amountMl} ml` : undefined, formatDuration(f.durationMin)]
+            .filter(Boolean)
+            .join(' · ');
+        }
       } else {
         title = f.foodName || 'Solid food';
         subtitle = f.amount;
       }
-      events.push({ id: f.id, category: 'feeding', icon: 'nutrition', title, subtitle, time: f.startTime });
+      events.push({ id: f.id, category: 'feeding', icon, title, subtitle, time: f.startTime });
     });
 
     diaper.filter((d) => isSameDay(d.time, date)).forEach((d) => {

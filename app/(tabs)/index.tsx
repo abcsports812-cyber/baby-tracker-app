@@ -26,7 +26,10 @@ export default function HomeScreen() {
   const today = useMemo(() => new Date(), []);
   const timeline = useTimelineEvents(today, 'desc');
 
-  const feedingToday = feeding.filter((f) => isSameDay(f.startTime, today));
+  // Pumping sessions live in the Feeding store but aren't a baby-feeding
+  // event, so the Feeding stat card excludes them (see app/pumping).
+  const babyFeeding = useMemo(() => feeding.filter((f) => f.type !== 'pump'), [feeding]);
+  const feedingToday = babyFeeding.filter((f) => isSameDay(f.startTime, today));
   const diaperToday = diaper.filter((d) => isSameDay(d.time, today));
   const sleepToday = sleep.filter((s) => isSameDay(s.startTime, today));
   const lastGrowth = [...growth].sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -37,7 +40,7 @@ export default function HomeScreen() {
     return sum + (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 60000;
   }, 0);
 
-  const lastFeeding = [...feeding].sort((a, b) => b.startTime.localeCompare(a.startTime))[0];
+  const lastFeeding = [...babyFeeding].sort((a, b) => b.startTime.localeCompare(a.startTime))[0];
   const lastDiaper = [...diaper].sort((a, b) => b.time.localeCompare(a.time))[0];
 
   if (!profile) {
@@ -110,6 +113,7 @@ export default function HomeScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
         <View style={styles.quickRow}>
           <QuickActionButton category="feeding" icon="nutrition" label="Feeding" onPress={() => router.push('/feeding?add=1')} />
+          <QuickActionButton category="feeding" icon="timer-outline" label="Pumping" onPress={() => router.push('/pumping')} />
           <QuickActionButton category="diaper" icon="water" label="Diaper" onPress={() => router.push('/diaper?add=1')} />
           <QuickActionButton category="sleep" icon="moon" label="Sleep" onPress={() => router.push('/sleep?add=1')} />
           <QuickActionButton category="sound" icon="headset" label="Sounds" onPress={() => router.push('/sounds')} />

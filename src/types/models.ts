@@ -17,23 +17,26 @@ export interface BabyProfile {
   updatedAt: string;
 }
 
-export type FeedingType = 'breast' | 'bottle' | 'solid';
+export type FeedingType = 'breast' | 'bottle' | 'solid' | 'pump';
 export type BreastSide = 'left' | 'right' | 'both';
 
 export interface FeedingRecord {
   id: ID;
   type: FeedingType;
   startTime: string; // ISO datetime
-  // breast
+  // breast; also reused by pump (side, durationMin)
   side?: BreastSide;
   durationMin?: number;
-  // bottle
+  // bottle; amountMl also reused by pump as total expressed volume (ml)
   amountMl?: number;
   milkType?: string;
   // solid
   foodName?: string;
   amount?: string;
   reaction?: string;
+  // pump — optional per-side breakdown; when both are set, amountMl is their sum
+  leftAmountMl?: number;
+  rightAmountMl?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;

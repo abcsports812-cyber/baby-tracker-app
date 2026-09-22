@@ -42,7 +42,11 @@ export default function FeedingScreen() {
   const [reaction, setReaction] = useState('');
   const [notes, setNotes] = useState('');
 
-  const sorted = useMemo(() => [...items].sort((a, b) => b.startTime.localeCompare(a.startTime)), [items]);
+  // Pumping sessions live in the same store (see app/pumping) but aren't a
+  // baby-feeding event, so they're excluded from this screen entirely.
+  const babyFeedingItems = useMemo(() => items.filter((f) => f.type !== 'pump'), [items]);
+
+  const sorted = useMemo(() => [...babyFeedingItems].sort((a, b) => b.startTime.localeCompare(a.startTime)), [babyFeedingItems]);
   const today = new Date();
   const todayCount = sorted.filter((f) => isSameDay(f.startTime, today)).length;
 
@@ -50,9 +54,9 @@ export default function FeedingScreen() {
     const days = last7Days();
     return days.map((d) => ({
       label: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
-      value: items.filter((f) => toISODate(new Date(f.startTime)) === toISODate(d)).length,
+      value: babyFeedingItems.filter((f) => toISODate(new Date(f.startTime)) === toISODate(d)).length,
     }));
-  }, [items]);
+  }, [babyFeedingItems]);
 
   const resetForm = () => {
     setType('breast');

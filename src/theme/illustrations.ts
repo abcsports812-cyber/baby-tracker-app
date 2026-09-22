@@ -22,7 +22,8 @@ export type IllustrationKey =
   | 'settings'
   | 'solidFood'
   | 'sounds'
-  | 'guides';
+  | 'guides'
+  | 'pumping';
 
 // All 18 approved illustrations are integrated here. "activities" is
 // intentionally left without a source: the supplied 19th image (a baby
@@ -77,4 +78,5 @@ export const illustrationIconFallback: Record<IllustrationKey, IconFallback> = {
   solidFood: { icon: 'restaurant', category: 'feeding' },
   sounds: { icon: 'headset', category: 'sound' },
   guides: { icon: 'book-outline', category: 'growth' },
+  pumping: { icon: 'timer-outline', category: 'feeding' },
 };

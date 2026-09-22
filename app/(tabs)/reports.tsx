@@ -30,9 +30,13 @@ export default function ReportsScreen() {
 
   const days = useMemo(() => last7Days(), []);
 
+  // Pumping sessions live in the Feeding store but aren't a baby-feeding
+  // event, so this chart (and its "hasAnyData" check below) excludes them.
+  const babyFeeding = useMemo(() => feeding.filter((f) => f.type !== 'pump'), [feeding]);
+
   const feedingWeek = days.map((d) => ({
     label: weekLabel(d),
-    value: feeding.filter((f) => toISODate(new Date(f.startTime)) === toISODate(d)).length,
+    value: babyFeeding.filter((f) => toISODate(new Date(f.startTime)) === toISODate(d)).length,
   }));
 
   const diaperWet = days.map((d) => ({
@@ -68,7 +72,7 @@ export default function ReportsScreen() {
 
   const completedMilestones = milestones.filter((m) => m.completed).length;
 
-  const hasAnyData = feeding.length || diaper.length || sleep.length || growth.length || activities.length || milestones.some((m) => m.completed);
+  const hasAnyData = babyFeeding.length || diaper.length || sleep.length || growth.length || activities.length || milestones.some((m) => m.completed);
 
   return (
     <Screen>
@@ -88,7 +92,7 @@ export default function ReportsScreen() {
         </Card>
       )}
 
-      {feeding.length > 0 && (
+      {babyFeeding.length > 0 && (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Feeding · daily count</Text>
           <BarChart data={feedingWeek} color={categoryColors.feeding.accent} height={120} />
