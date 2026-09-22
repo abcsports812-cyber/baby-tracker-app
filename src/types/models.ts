@@ -253,3 +253,8 @@ export interface SoundMix {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RecentGuideEntry {
+  guideId: ID;
+  viewedAt: string;
+}

@@ -18,6 +18,7 @@ const CORE_TRACKERS: ModuleTile[] = [
   { key: 'sleep', label: 'Sleep', route: '/sleep' },
   { key: 'sounds', label: 'Sounds', route: '/sounds' },
   { key: 'growth', label: 'Growth', route: '/growth' },
+  { key: 'guides', label: 'Guides', route: '/guides' },
 ];
 
 const MORE_TRACKERS: ModuleTile[] = [

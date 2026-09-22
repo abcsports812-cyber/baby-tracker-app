@@ -14,6 +14,7 @@ import type {
   JournalNote,
   Memory,
   Milestone,
+  RecentGuideEntry,
   RecentSoundEntry,
   Reminder,
   SleepRecord,
@@ -50,3 +51,6 @@ export const useNoteStore = createCollectionStore<JournalNote>('notes');
 export const useFavoriteSoundsStore = createSingletonStore<string[]>('favoriteSounds', []);
 export const useRecentSoundsStore = createSingletonStore<RecentSoundEntry[]>('recentSounds', []);
 export const useSoundMixStore = createCollectionStore<SoundMix>('soundMixes');
+
+export const useSavedGuidesStore = createSingletonStore<string[]>('savedGuides', []);
+export const useRecentGuidesStore = createSingletonStore<RecentGuideEntry[]>('recentGuides', []);
