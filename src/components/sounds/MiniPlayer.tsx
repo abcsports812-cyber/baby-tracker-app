@@ -6,6 +6,7 @@ import { getSoundById } from '../../data/sounds';
 import { useSoundPlayerStore } from '../../store/soundPlayer';
 import { categoryColors, fontSize, palette, radius, shadow, spacing } from '../../theme';
 import { PlayingIndicator } from './PlayingIndicator';
+import { SoundIllustration } from './SoundIllustration';
 
 interface Props {
   onPress: () => void;
@@ -52,7 +53,7 @@ export function MiniPlayer({ onPress }: Props) {
     >
       <Pressable style={styles.content} onPress={onPress} accessibilityLabel={`Reopen ${title} player`}>
         <View style={[styles.iconWrap, { backgroundColor: colors.bg }]}>
-          <Ionicons name={primarySound.icon} size={18} color={colors.accent} />
+          <SoundIllustration variant={primarySound.illustration} size={22} />
         </View>
         <View style={styles.textWrap}>
           <Text style={styles.title} numberOfLines={1}>

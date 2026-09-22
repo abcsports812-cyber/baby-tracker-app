@@ -9,6 +9,7 @@ import { Button } from '../../src/components/ui/Button';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { SOUNDS, getSoundById } from '../../src/data/sounds';
+import { SoundIllustration } from '../../src/components/sounds/SoundIllustration';
 import { useSoundMixStore } from '../../src/store';
 import { useSoundPlayerStore } from '../../src/store/soundPlayer';
 import { generateId, nowIso } from '../../src/lib/id';
@@ -120,7 +121,7 @@ export default function MixSoundsScreen() {
                   {isSelected && <Ionicons name="checkmark" size={14} color={palette.white} />}
                 </View>
                 <View style={[styles.mixIconWrap, { backgroundColor: colors.bg }]}>
-                  <Ionicons name={sound.icon} size={16} color={colors.accent} />
+                  <SoundIllustration variant={sound.illustration} size={20} />
                 </View>
                 <Text style={styles.selectLabel}>{sound.name}</Text>
               </Pressable>

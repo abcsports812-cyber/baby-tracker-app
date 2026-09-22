@@ -14,6 +14,7 @@ import { useFavoriteSoundsStore } from '../../store';
 import { useSoundPlayerStore, type SleepTimerMinutes } from '../../store/soundPlayer';
 import { categoryColors, fontSize, palette, radius, spacing } from '../../theme';
 import { SleepTimerSheet } from './SleepTimerSheet';
+import { SoundIllustration, type SoundIllustrationKey } from './SoundIllustration';
 
 interface Props {
   visible: boolean;
@@ -29,7 +30,7 @@ function formatClock(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function PulsingArtwork({ playing, color, icon }: { playing: boolean; color: string; icon: keyof typeof Ionicons.glyphMap }) {
+function PulsingArtwork({ playing, color, illustration }: { playing: boolean; color: string; illustration: SoundIllustrationKey }) {
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -49,7 +50,7 @@ function PulsingArtwork({ playing, color, icon }: { playing: boolean; color: str
     <View style={styles.artworkWrap}>
       <Animated.View style={[styles.ring, { backgroundColor: color }, ringStyle]} />
       <View style={[styles.artworkCircle, { backgroundColor: color }]}>
-        <Ionicons name={icon} size={68} color={palette.white} />
+        <SoundIllustration variant={illustration} size={92} tone="mono" />
       </View>
     </View>
   );
@@ -145,7 +146,7 @@ export function SoundPlayerSheet({ visible, soundId, contextIds, onNavigate, onC
           </Pressable>
         </View>
 
-        <PulsingArtwork playing={isThisPlaying} color={colors.accent} icon={sound.icon} />
+        <PulsingArtwork playing={isThisPlaying} color={colors.accent} illustration={sound.illustration} />
 
         <Text style={styles.title}>{sound.name}</Text>
         <Text style={styles.description}>{sound.description}</Text>

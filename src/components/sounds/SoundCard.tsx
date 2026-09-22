@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { categoryColors, fontSize, palette, radius, shadow, spacing } from '../../theme';
 import type { Sound } from '../../data/sounds';
 import { PlayingIndicator } from './PlayingIndicator';
+import { SoundIllustration } from './SoundIllustration';
 
 interface Props {
   sound: Sound;
@@ -25,7 +26,7 @@ export function SoundCard({ sound, isActive, isPlaying, isFavorite, onPress, onT
     >
       <View style={styles.topRow}>
         <View style={[styles.iconWrap, { backgroundColor: colors.bg }]}>
-          <Ionicons name={sound.icon} size={22} color={colors.accent} />
+          <SoundIllustration variant={sound.illustration} size={26} />
         </View>
         <Pressable onPress={onToggleFavorite} hitSlop={10} style={styles.heartBtn}>
           <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={18} color={isFavorite ? palette.primaryPink : palette.textFaint} />

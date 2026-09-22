@@ -1,4 +1,4 @@
-import type { Ionicons } from '@expo/vector-icons';
+import type { SoundIllustrationKey } from '../components/sounds/SoundIllustration';
 
 export type SoundAssetKey =
   | 'whiteNoise'
@@ -38,7 +38,7 @@ export interface Sound {
   id: string;
   name: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  illustration: SoundIllustrationKey;
   assetKey: SoundAssetKey;
   /** Whether this sound can be combined with others in Mix Sounds. */
   mixable: boolean;
@@ -49,7 +49,7 @@ export const SOUNDS: Sound[] = [
     id: 'white-noise',
     name: 'White Noise',
     description: 'Steady background sound for calm sleep',
-    icon: 'radio-outline',
+    illustration: 'whiteNoise',
     assetKey: 'whiteNoise',
     mixable: true,
   },
@@ -57,7 +57,7 @@ export const SOUNDS: Sound[] = [
     id: 'gentle-rain',
     name: 'Gentle Rain',
     description: 'Soft rainfall for a peaceful atmosphere',
-    icon: 'rainy-outline',
+    illustration: 'rain',
     assetKey: 'rain',
     mixable: true,
   },
@@ -65,7 +65,7 @@ export const SOUNDS: Sound[] = [
     id: 'womb',
     name: 'Womb',
     description: 'A gentle rhythmic sound inspired by the womb',
-    icon: 'heart-circle-outline',
+    illustration: 'womb',
     assetKey: 'womb',
     mixable: true,
   },
@@ -73,7 +73,7 @@ export const SOUNDS: Sound[] = [
     id: 'lullaby',
     name: 'Lullaby',
     description: 'Soft melodies for quiet bedtime moments',
-    icon: 'musical-notes-outline',
+    illustration: 'lullaby',
     assetKey: 'lullaby',
     mixable: false,
   },
@@ -81,7 +81,7 @@ export const SOUNDS: Sound[] = [
     id: 'heartbeat',
     name: 'Heartbeat',
     description: 'A gentle rhythmic soothing sound',
-    icon: 'pulse-outline',
+    illustration: 'heartbeat',
     assetKey: 'heartbeat',
     mixable: true,
   },
@@ -89,7 +89,7 @@ export const SOUNDS: Sound[] = [
     id: 'shushing',
     name: 'Gentle Shushing',
     description: 'A soft, rhythmic hush to settle little ones',
-    icon: 'ear-outline',
+    illustration: 'shushing',
     assetKey: 'shushing',
     mixable: true,
   },
@@ -97,7 +97,7 @@ export const SOUNDS: Sound[] = [
     id: 'fan',
     name: 'Fan',
     description: 'A steady breeze hum for restful naps',
-    icon: 'sync-outline',
+    illustration: 'fan',
     assetKey: 'fan',
     mixable: true,
   },
@@ -105,7 +105,7 @@ export const SOUNDS: Sound[] = [
     id: 'hair-dryer',
     name: 'Hair Dryer',
     description: 'A familiar warm, steady drone',
-    icon: 'aperture-outline',
+    illustration: 'hairDryer',
     assetKey: 'fan',
     mixable: true,
   },
@@ -113,7 +113,7 @@ export const SOUNDS: Sound[] = [
     id: 'ocean',
     name: 'Ocean',
     description: 'Slow, rolling waves for deep relaxation',
-    icon: 'water-outline',
+    illustration: 'ocean',
     assetKey: 'ocean',
     mixable: true,
   },
@@ -121,7 +121,7 @@ export const SOUNDS: Sound[] = [
     id: 'nature',
     name: 'Nature',
     description: 'Calm outdoor sounds for relaxation',
-    icon: 'leaf-outline',
+    illustration: 'nature',
     assetKey: 'nature',
     mixable: true,
   },
@@ -129,7 +129,7 @@ export const SOUNDS: Sound[] = [
     id: 'gentle-ambient',
     name: 'Gentle Ambient',
     description: 'A soft, warm backdrop of quiet sound',
-    icon: 'cloud-outline',
+    illustration: 'ambient',
     assetKey: 'ambient',
     mixable: true,
   },
@@ -137,7 +137,7 @@ export const SOUNDS: Sound[] = [
     id: 'calm-sleep',
     name: 'Calm Sleep',
     description: 'A low, cozy hum to drift off to',
-    icon: 'moon-outline',
+    illustration: 'calmSleep',
     assetKey: 'softPad',
     mixable: true,
   },

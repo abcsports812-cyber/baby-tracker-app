@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Sound } from '../../data/sounds';
 import { categoryColors, fontSize, palette, radius, shadow, spacing } from '../../theme';
+import { SoundIllustration } from './SoundIllustration';
 
 interface Props {
   sound: Sound;
@@ -17,7 +18,11 @@ export function SoundChip({ sound, isActive, isPlaying, onPress }: Props) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.chip, shadow.soft, pressed && { opacity: 0.9 }]}>
       <View style={[styles.iconWrap, { backgroundColor: colors.bg }]}>
-        <Ionicons name={showPlaying ? 'pause' : sound.icon} size={18} color={colors.accent} />
+        {showPlaying ? (
+          <Ionicons name="pause" size={18} color={colors.accent} />
+        ) : (
+          <SoundIllustration variant={sound.illustration} size={22} />
+        )}
       </View>
       <Text style={styles.label} numberOfLines={1}>
         {sound.name}
