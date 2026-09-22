@@ -37,6 +37,7 @@ export const categoryColors = {
   note: { bg: '#FFF8E5', accent: palette.softYellowDark, text: '#8A6D1C' },
   reminder: { bg: '#FDE9EC', accent: palette.primaryPink, text: '#A34A5C' },
   family: { bg: '#EFE9FB', accent: palette.lavenderDark, text: '#5B4491' },
+  sound: { bg: '#E8F1FB', accent: '#5B8DEF', text: '#2E5590' },
 } as const;
 
 export type CategoryKey = keyof typeof categoryColors;

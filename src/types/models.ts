@@ -239,3 +239,17 @@ export interface AppSettings {
   language: string;
   onboardingCompleted: boolean;
 }
+
+export interface RecentSoundEntry {
+  soundId: ID;
+  playedAt: string;
+}
+
+export interface SoundMix {
+  id: ID;
+  name: string;
+  soundIds: string[];
+  volumes: Record<string, number>; // soundId -> 0..1
+  createdAt: string;
+  updatedAt: string;
+}

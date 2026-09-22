@@ -14,8 +14,10 @@ import type {
   JournalNote,
   Memory,
   Milestone,
+  RecentSoundEntry,
   Reminder,
   SleepRecord,
+  SoundMix,
   Vaccination,
 } from '../types/models';
 
@@ -44,3 +46,7 @@ export const useActivityStore = createCollectionStore<ActivityRecord>('activitie
 export const useMemoryStore = createCollectionStore<Memory>('memories');
 export const useCaregiverStore = createCollectionStore<Caregiver>('caregivers');
 export const useNoteStore = createCollectionStore<JournalNote>('notes');
+
+export const useFavoriteSoundsStore = createSingletonStore<string[]>('favoriteSounds', []);
+export const useRecentSoundsStore = createSingletonStore<RecentSoundEntry[]>('recentSounds', []);
+export const useSoundMixStore = createCollectionStore<SoundMix>('soundMixes');

@@ -112,6 +112,7 @@ export default function HomeScreen() {
           <QuickActionButton category="feeding" icon="nutrition" label="Feeding" onPress={() => router.push('/feeding?add=1')} />
           <QuickActionButton category="diaper" icon="water" label="Diaper" onPress={() => router.push('/diaper?add=1')} />
           <QuickActionButton category="sleep" icon="moon" label="Sleep" onPress={() => router.push('/sleep?add=1')} />
+          <QuickActionButton category="sound" icon="headset" label="Sounds" onPress={() => router.push('/sounds')} />
           <QuickActionButton category="growth" icon="trending-up" label="Growth" onPress={() => router.push('/growth?add=1')} />
           <QuickActionButton category="milestone" icon="star" label="Milestone" onPress={() => router.push('/milestones?add=1')} />
           <QuickActionButton category="memory" icon="images" label="Memory" onPress={() => router.push('/memories?add=1')} />
