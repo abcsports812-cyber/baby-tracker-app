@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { BabyHeader } from '../../src/components/home/BabyHeader';
 import { SectionHeader } from '../../src/components/ui/SectionHeader';
@@ -9,7 +10,7 @@ import { QuickActionButton } from '../../src/components/ui/QuickActionButton';
 import { RecordRow } from '../../src/components/ui/RecordRow';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useBabyProfileStore, useDiaperStore, useFeedingStore, useGrowthStore, useMilestoneStore, useSettingsStore, useSleepStore } from '../../src/store';
-import { palette, spacing } from '../../src/theme';
+import { fontSize, palette, radius, spacing } from '../../src/theme';
 import { formatDate, formatDuration, formatTime, isSameDay } from '../../src/lib/date';
 import { formatWeight } from '../../src/lib/units';
 import { eventTimeLabel, useTimelineEvents } from '../../src/lib/timeline';
@@ -60,6 +61,11 @@ export default function HomeScreen() {
   return (
     <Screen>
       <BabyHeader profile={profile} />
+
+      <Pressable style={styles.searchPill} onPress={() => router.push('/search')} accessibilityLabel="Search">
+        <Ionicons name="search-outline" size={18} color={palette.textFaint} />
+        <Text style={styles.searchPillLabel}>Search everything you&rsquo;ve recorded</Text>
+      </Pressable>
 
       <SectionHeader title="Today's overview" />
       <View style={styles.grid}>
@@ -151,6 +157,23 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  searchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: palette.white,
+    borderRadius: radius.pill,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  searchPillLabel: {
+    fontSize: fontSize.sm,
+    color: palette.textFaint,
+    fontWeight: '600',
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

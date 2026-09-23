@@ -56,3 +56,7 @@ export const useSoundMixStore = createCollectionStore<SoundMix>('soundMixes');
 
 export const useSavedGuidesStore = createSingletonStore<string[]>('savedGuides', []);
 export const useRecentGuidesStore = createSingletonStore<RecentGuideEntry[]>('recentGuides', []);
+
+// A recency cache, not user data — intentionally excluded from BackupStores,
+// exactly like recentSounds/recentGuides above.
+export const useRecentSearchesStore = createSingletonStore<string[]>('recentSearches', []);
