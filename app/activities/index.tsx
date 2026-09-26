@@ -13,6 +13,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useActivityStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime, formatDuration } from '../../src/lib/date';
 import { activityLabel } from '../../src/lib/labels';
@@ -32,7 +33,8 @@ const ACTIVITY_OPTIONS: { value: ActivityKind; label: string }[] = [
 ];
 
 export default function ActivitiesScreen() {
-  const items = useActivityStore((s) => s.items);
+  const rawItems = useActivityStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useActivityStore((s) => s.add);
   const update = useActivityStore((s) => s.update);
   const remove = useActivityStore((s) => s.remove);
@@ -81,7 +83,7 @@ export default function ActivitiesScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Activity updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Activity logged', 'game-controller');
     }
     setSheetOpen(false);

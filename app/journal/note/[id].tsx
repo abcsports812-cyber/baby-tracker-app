@@ -14,6 +14,7 @@ import { ChipSelect } from '../../../src/components/ui/ChipSelect';
 import { DateTimeField } from '../../../src/components/ui/DateTimeField';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 import { useMilestoneStore, useNoteStore } from '../../../src/store';
+import { useBabyScoped } from '../../../src/lib/babyScope';
 import { nowIso } from '../../../src/lib/id';
 import { formatDate } from '../../../src/lib/date';
 import { journalCategoryLabel, noteCategoryLabel } from '../../../src/lib/labels';
@@ -25,10 +26,17 @@ const NO_MILESTONE = 'none';
 
 export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const notes = useNoteStore((s) => s.items);
+  // Scoped before lookup: an id reached via a stale deep link (a Search
+  // result, a saved link) that belongs to a baby other than the active one
+  // resolves to undefined here, falling through to the existing "not
+  // found" state below — the active baby can never open another baby's
+  // note for viewing or editing this way.
+  const rawNotes = useNoteStore((s) => s.items);
+  const notes = useBabyScoped(rawNotes);
   const update = useNoteStore((s) => s.update);
   const remove = useNoteStore((s) => s.remove);
-  const milestones = useMilestoneStore((s) => s.items);
+  const rawMilestones = useMilestoneStore((s) => s.items);
+  const milestones = useBabyScoped(rawMilestones);
 
   const note = notes.find((n) => n.id === id);
   const relatedMilestone = note?.relatedMilestoneId ? milestones.find((m) => m.id === note.relatedMilestoneId) : undefined;

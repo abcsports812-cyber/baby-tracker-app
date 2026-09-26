@@ -13,6 +13,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useReminderStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped, withBabyPrefix } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime } from '../../src/lib/date';
 import { reminderCategoryLabel } from '../../src/lib/labels';
@@ -22,7 +23,8 @@ import { palette, radius, fontSize, spacing } from '../../src/theme';
 import type { Reminder, ReminderCategory, ReminderRepeat } from '../../src/types/models';
 
 export default function RemindersScreen() {
-  const items = useReminderStore((s) => s.items);
+  const rawItems = useReminderStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useReminderStore((s) => s.add);
   const update = useReminderStore((s) => s.update);
   const remove = useReminderStore((s) => s.remove);
@@ -61,7 +63,7 @@ export default function RemindersScreen() {
     if (existing?.notificationId) await cancelReminderNotification(existing.notificationId);
 
     const notificationId = await scheduleReminderNotification({
-      title: title.trim() || 'Reminder',
+      title: withBabyPrefix(title.trim() || 'Reminder'),
       body: reminderCategoryLabel[category],
       date: when,
       repeat,
@@ -80,7 +82,7 @@ export default function RemindersScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Reminder updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Reminder set', 'alarm');
     }
     setSheetOpen(false);
@@ -92,7 +94,7 @@ export default function RemindersScreen() {
       update(r.id, { enabled: false, notificationId: undefined, updatedAt: nowIso() });
     } else {
       const notificationId = await scheduleReminderNotification({
-        title: r.title,
+        title: withBabyPrefix(r.title),
         body: reminderCategoryLabel[r.category],
         date: new Date(r.dateTime),
         repeat: r.repeat,
@@ -127,7 +129,7 @@ export default function RemindersScreen() {
                 </Text>
               </Pressable>
               <Switch value={r.enabled} onValueChange={() => toggleEnabled(r)} trackColor={{ true: palette.primaryPink, false: palette.border }} />
-              <Pressable onPress={() => setDeleteId(r.id)} hitSlop={10} style={{ marginLeft: spacing.sm }}>
+              <Pressable onPress={() => setDeleteId(r.id)} hitSlop={10} style={{ marginLeft: spacing.sm }} accessibilityLabel="Delete reminder">
                 <Ionicons name="trash-outline" size={16} color={palette.textFaint} />
               </Pressable>
             </View>

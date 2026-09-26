@@ -10,6 +10,7 @@ import {
   useActivityStore,
   useAppointmentStore,
   useBabyCareStore,
+  useBabyProfilesStore,
   useCaregiverStore,
   useDiaperStore,
   useFeedingStore,
@@ -71,8 +72,10 @@ function RestorePreviewModal({
           {summary && (
             <>
               <View style={styles.previewMetaRow}>
-                <Text style={styles.previewMetaLabel}>Baby</Text>
-                <Text style={styles.previewMetaValue}>{summary.babyName ?? 'Not set'}</Text>
+                <Text style={styles.previewMetaLabel}>{summary.babyCount > 1 ? 'Babies' : 'Baby'}</Text>
+                <Text style={styles.previewMetaValue}>
+                  {summary.babyCount > 1 ? `${summary.babyCount} (${summary.babyNames.join(', ')})` : summary.babyName ?? 'Not set'}
+                </Text>
               </View>
               <View style={styles.previewMetaRow}>
                 <Text style={styles.previewMetaLabel}>Backup date</Text>
@@ -131,6 +134,7 @@ export default function DataSettingsScreen() {
   const caregivers = useCaregiverStore();
   const notes = useNoteStore();
   const teeth = useToothStore();
+  const babyProfiles = useBabyProfilesStore((s) => s.items);
 
   const totalRecords =
     feeding.items.length +
@@ -280,7 +284,8 @@ export default function DataSettingsScreen() {
         <Text style={styles.body}>
           All your data is stored privately on this device — nothing is uploaded to the cloud. Clearing data removes every
           feeding, diaper, sleep, growth, milestone, health, appointment, reminder, baby care, activity, memory, note and
-          caregiver record. Your baby’s profile and app settings are kept.
+          caregiver record{babyProfiles.length > 1 ? ' for every baby profile on this device' : ''}.{' '}
+          {babyProfiles.length > 1 ? 'Your babies’ profiles' : 'Your baby’s profile'} and app settings are kept.
         </Text>
         <Button
           label="Clear all tracking data"
@@ -294,7 +299,11 @@ export default function DataSettingsScreen() {
       <ConfirmDialog
         visible={confirmOpen}
         title="Clear all tracking data?"
-        message="This permanently deletes all tracked records on this device. This cannot be undone."
+        message={
+          babyProfiles.length > 1
+            ? `This permanently deletes all tracked records for every baby on this device (${babyProfiles.length} babies: ${babyProfiles.map((p) => p.name).join(', ')}). This cannot be undone.`
+            : 'This permanently deletes all tracked records on this device. This cannot be undone.'
+        }
         confirmLabel="Clear data"
         onCancel={() => setConfirmOpen(false)}
         onConfirm={clearAll}

@@ -1,14 +1,16 @@
 import {
+  useActiveBabyIdStore,
   useActivityStore,
   useAppointmentStore,
   useBabyCareStore,
-  useBabyProfileStore,
+  useBabyProfilesStore,
   useCaregiverStore,
   useDiaperStore,
   useFavoriteSoundsStore,
   useFeedingStore,
   useGrowthStore,
   useHealthRecordStore,
+  useLegacyDefaultBabyIdStore,
   useMemoryStore,
   useMilestoneStore,
   useNoteStore,
@@ -22,7 +24,9 @@ import {
 } from '../store';
 import { cancelReminderNotification, scheduleReminderNotification } from './notifications';
 import { reminderCategoryLabel } from './labels';
+import { syncLegacyProfileMirror } from './babyScope';
 import type { BackupFile } from '../types/backup';
+import type { BabyProfile } from '../types/models';
 import { generateId, nowIso } from './id';
 
 /** Restore logic only — assumes `backup` has already passed
@@ -38,6 +42,55 @@ import { generateId, nowIso } from './id';
 const NOTIFICATION_TIMEOUT_MS = 4000;
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
   return Promise.race([promise, new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), ms))]);
+}
+
+/** Resolves the restored baby-profile set + active/legacy baby ids from a
+ * validated backup, transparently handling both shapes (Phase 3G):
+ *
+ * - V2 (`data.babyProfiles` present): restore exactly what the backup says.
+ * - V1 (no `babyProfiles` key at all): convert the single legacy
+ *   `babyProfile` into exactly one baby, and make it both the active and
+ *   legacy-default baby — the same rule Phase 1's one-time migration uses
+ *   for an existing on-device profile, applied here to a restored one.
+ *   A record with an undefined babyId keeps that undefined value (see the
+ *   store restoration below, which never stamps or rewrites babyId), and
+ *   `belongsToActiveBaby()` already resolves that back onto this one baby
+ *   via the legacy-default-id fallback — no bulk stamping is needed or
+ *   performed. */
+function resolveRestoredBabyState(backup: BackupFile): {
+  babyProfiles: BabyProfile[];
+  activeBabyId: string | null;
+  legacyDefaultBabyId: string | null;
+} {
+  const { data } = backup;
+  if (data.babyProfiles !== undefined) {
+    return {
+      babyProfiles: data.babyProfiles,
+      activeBabyId: data.activeBabyId ?? null,
+      legacyDefaultBabyId: data.legacyDefaultBabyId ?? null,
+    };
+  }
+  const legacy = data.babyProfile;
+  return {
+    babyProfiles: legacy ? [legacy] : [],
+    activeBabyId: legacy?.id ?? null,
+    legacyDefaultBabyId: legacy?.id ?? null,
+  };
+}
+
+/** Mirrors `withBabyPrefix()` (src/lib/babyScope.ts) but for an explicit
+ * target baby rather than "whichever baby is currently active" — restore
+ * regenerates notifications for every restored baby's records in one pass,
+ * not just the active baby's, so the active-baby-only helper doesn't fit
+ * here. Same format, same 0/1-baby no-op, same never-touches-notifications.ts
+ * contract; kept local to restore.ts rather than added to babyScope.ts since
+ * it solves a different problem (an arbitrary owner, not "the active one"). */
+function titleForBabyOwner(title: string, babyId: string | undefined, profiles: BabyProfile[], legacyDefaultBabyId: string | null): string {
+  if (profiles.length < 2) return title;
+  const ownerId = babyId ?? legacyDefaultBabyId;
+  const owner = ownerId ? profiles.find((p) => p.id === ownerId) : undefined;
+  if (!owner) return title;
+  return `${owner.name}: ${title}`;
 }
 
 /** Replaces all local data with the contents of a validated backup.
@@ -74,7 +127,19 @@ export async function applyBackup(backup: BackupFile): Promise<void> {
     id: typeof item.id === 'string' && item.id ? item.id : generateId(),
   });
 
-  useBabyProfileStore.getState().set(data.babyProfile);
+  // 2a. Baby-profile infrastructure — replace-only, same as every other
+  // store below. V1 backups are converted to exactly one baby (see
+  // resolveRestoredBabyState); no duplicate profiles, no bulk babyId
+  // stamping of legacy records.
+  const { babyProfiles, activeBabyId, legacyDefaultBabyId } = resolveRestoredBabyState(backup);
+  useBabyProfilesStore.getState().setAll(babyProfiles);
+  useActiveBabyIdStore.getState().set(activeBabyId);
+  useLegacyDefaultBabyIdStore.getState().set(legacyDefaultBabyId);
+  // Keeps the legacy singleton (every screen not yet on useActiveBabyProfile())
+  // showing the restored active baby, exactly as it does on any other
+  // active-baby change — see babyScope.ts's setActiveBaby().
+  syncLegacyProfileMirror();
+
   useSettingsStore.getState().patch({
     weightUnit: data.settings.weightUnit,
     heightUnit: data.settings.heightUnit,
@@ -116,7 +181,11 @@ export async function applyBackup(backup: BackupFile): Promise<void> {
   for (const v of restoredVax) {
     if (!v.reminderEnabled || !v.nextDueDate) continue;
     const notificationId = await withTimeout(
-      scheduleReminderNotification({ title: `Vaccination due: ${v.vaccineName}`, body: v.doseNumber || undefined, date: new Date(v.nextDueDate) }),
+      scheduleReminderNotification({
+        title: titleForBabyOwner(`Vaccination due: ${v.vaccineName}`, v.babyId, babyProfiles, legacyDefaultBabyId),
+        body: v.doseNumber || undefined,
+        date: new Date(v.nextDueDate),
+      }),
       NOTIFICATION_TIMEOUT_MS
     );
     if (notificationId) useVaccinationStore.getState().update(v.id, { notificationId, updatedAt: now });
@@ -126,7 +195,11 @@ export async function applyBackup(backup: BackupFile): Promise<void> {
   for (const a of restoredAppointments) {
     if (!a.reminderEnabled || a.completed) continue;
     const notificationId = await withTimeout(
-      scheduleReminderNotification({ title: `Appointment: ${a.title}`, body: a.doctorOrClinic || undefined, date: new Date(`${a.date}T${a.time ?? '09:00'}`) }),
+      scheduleReminderNotification({
+        title: titleForBabyOwner(`Appointment: ${a.title}`, a.babyId, babyProfiles, legacyDefaultBabyId),
+        body: a.doctorOrClinic || undefined,
+        date: new Date(`${a.date}T${a.time ?? '09:00'}`),
+      }),
       NOTIFICATION_TIMEOUT_MS
     );
     if (notificationId) useAppointmentStore.getState().update(a.id, { notificationId, updatedAt: now });
@@ -136,7 +209,12 @@ export async function applyBackup(backup: BackupFile): Promise<void> {
   for (const r of restoredReminders) {
     if (!r.enabled) continue;
     const notificationId = await withTimeout(
-      scheduleReminderNotification({ title: r.title, body: reminderCategoryLabel[r.category], date: new Date(r.dateTime), repeat: r.repeat }),
+      scheduleReminderNotification({
+        title: titleForBabyOwner(r.title, r.babyId, babyProfiles, legacyDefaultBabyId),
+        body: reminderCategoryLabel[r.category],
+        date: new Date(r.dateTime),
+        repeat: r.repeat,
+      }),
       NOTIFICATION_TIMEOUT_MS
     );
     if (notificationId) useReminderStore.getState().update(r.id, { notificationId, updatedAt: now });

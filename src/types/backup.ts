@@ -19,7 +19,7 @@ import type {
   Vaccination,
 } from './models';
 
-export const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_FORMAT_VERSION = 2;
 
 /** notificationId is an OS notification-scheduler handle, meaningless outside
  * the device that created it — never included in a backup, always
@@ -60,7 +60,18 @@ export interface BackupStores {
 export type BackupSettings = Omit<AppSettings, 'onboardingCompleted'>;
 
 export interface BackupData {
+  /** V1 field. Always populated — mirrors whichever baby the app currently
+   * treats as active (the same value useBabyProfileStore mirrors — see
+   * syncLegacyProfileMirror) — so a V1-shaped reader still finds a single
+   * sensible profile here even in a backup that actually holds several. */
   babyProfile: BabyProfile | null;
+  /** V2 fields (Phase 3G). Absent entirely on a V1 backup — never
+   * present-but-empty — so `data.babyProfiles === undefined` is exactly the
+   * signal restore.ts uses to take the V1 single-baby compatibility path
+   * instead of the V2 multi-baby one. */
+  babyProfiles?: BabyProfile[];
+  activeBabyId?: string | null;
+  legacyDefaultBabyId?: string | null;
   settings: BackupSettings;
   stores: BackupStores;
 }

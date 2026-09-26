@@ -13,6 +13,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useAppointmentStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped, withBabyPrefix } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -21,7 +22,8 @@ import { fontSize, palette, radius, spacing } from '../../src/theme';
 import type { Appointment } from '../../src/types/models';
 
 export default function AppointmentsScreen() {
-  const items = useAppointmentStore((s) => s.items);
+  const rawItems = useAppointmentStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useAppointmentStore((s) => s.add);
   const update = useAppointmentStore((s) => s.update);
   const remove = useAppointmentStore((s) => s.remove);
@@ -72,7 +74,7 @@ export default function AppointmentsScreen() {
     let notificationId: string | undefined;
     if (reminderEnabled) {
       notificationId = await scheduleReminderNotification({
-        title: `Appointment: ${title || 'Appointment'}`,
+        title: withBabyPrefix(`Appointment: ${title || 'Appointment'}`),
         body: doctor || undefined,
         date: when,
       });
@@ -92,7 +94,7 @@ export default function AppointmentsScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Appointment updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, completed: false, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, completed: false, createdAt: now, updatedAt: now }));
       showToast('Appointment added', 'calendar');
     }
     setSheetOpen(false);

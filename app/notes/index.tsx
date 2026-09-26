@@ -14,6 +14,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useMilestoneStore, useNoteStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate } from '../../src/lib/date';
 import { journalCategoryLabel, noteCategoryLabel } from '../../src/lib/labels';
@@ -24,11 +25,16 @@ import type { JournalCategory, JournalNote } from '../../src/types/models';
 const NO_MILESTONE = 'none';
 
 export default function NotesScreen() {
-  const items = useNoteStore((s) => s.items);
+  const rawItems = useNoteStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useNoteStore((s) => s.add);
   const update = useNoteStore((s) => s.update);
   const remove = useNoteStore((s) => s.remove);
-  const milestones = useMilestoneStore((s) => s.items);
+  // Related-milestone picker: scoped so a note can only ever link to the
+  // active baby's own milestones, never another baby's (Milestones' own
+  // screen/seeding is untouched here — Phase 3D).
+  const rawMilestones = useMilestoneStore((s) => s.items);
+  const milestones = useBabyScoped(rawMilestones);
 
   const [sheetOpen, setSheetOpen] = useAutoOpenAdd();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -96,7 +102,7 @@ export default function NotesScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Note updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Note saved', 'document-text');
     }
     setSheetOpen(false);

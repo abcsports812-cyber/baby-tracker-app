@@ -19,7 +19,9 @@ import {
   useToothStore,
   useVaccinationStore,
 } from '../store';
-import type { BabyProfile } from '../types/models';
+import { generateId, nowIso } from './id';
+import { DEFAULT_MILESTONES } from './seed';
+import type { BabyProfile, ToothRecord } from '../types/models';
 
 /** Any per-baby record: FeedingRecord, Milestone, ToothRecord, etc. */
 export interface BabyScoped {
@@ -101,11 +103,14 @@ export function syncLegacyProfileMirror(): void {
 }
 
 /** The one way to change which baby is active anywhere in the app —
- * switching, or right after a new baby is created. Never touches any
- * tracking record (Phase 2 makes no such changes). */
+ * switching, or right after a new baby is created. Also ensures the newly
+ * active baby has its own default milestones (Phase 3D) — see
+ * ensureMilestonesSeededForBaby, a guarded no-op for the legacy-default
+ * baby and for any baby that already has its own milestones. */
 export function setActiveBaby(babyId: string | null): void {
   useActiveBabyIdStore.getState().set(babyId);
   syncLegacyProfileMirror();
+  if (babyId) ensureMilestonesSeededForBaby(babyId);
 }
 
 /** Sets legacyDefaultBabyId only if it isn't already set — a defensive
@@ -159,4 +164,122 @@ export function useUnmigratedLegacyRecordCount(): number {
     ];
     return all.reduce((sum, items) => sum + items.filter((item) => item.babyId == null).length, 0);
   }, [feeding, diaper, sleep, growth, milestones, vaccinations, healthRecords, appointments, reminders, babyCare, activities, memories, notes, teeth]);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3A — shared scoping infrastructure + write-safety helpers.
+// Nothing below this point is called by any screen yet — these are the
+// building blocks later Phase 3 checkpoints wire in one module at a time.
+// No existing record is ever rewritten or renamed by anything here.
+// ---------------------------------------------------------------------------
+
+/** Stamps `babyId` (the current active baby) onto a new record's payload
+ * without mutating the caller's object — used at every per-baby `add()`
+ * call site once its screen is migrated (Phase 3B+). Throws rather than
+ * silently creating an orphaned record if there is somehow no active baby,
+ * which should be structurally unreachable once onboarding has run. */
+export function stampActiveBaby<T extends object>(payload: T): T & { babyId: string } {
+  const babyId = useActiveBabyIdStore.getState().value;
+  if (!babyId) {
+    throw new Error('stampActiveBaby: no active baby — cannot create a per-baby record.');
+  }
+  return { ...payload, babyId };
+}
+
+/** Returns `title` unchanged when there is 0 or 1 baby, preserving today's
+ * exact notification text for every current single-baby user. Once 2+
+ * babies exist, prefixes the active baby's name so a scheduled
+ * notification (Reminders/Appointments/Health, wired in a later
+ * checkpoint) can never read as ambiguous between babies. Does not touch
+ * src/lib/notifications.ts — callers pass the already-prefixed title into
+ * scheduleReminderNotification() exactly as they do today. */
+export function withBabyPrefix(title: string): string {
+  const profiles = useBabyProfilesStore.getState().items;
+  if (profiles.length < 2) return title;
+  const activeBabyId = useActiveBabyIdStore.getState().value;
+  const active = activeBabyId ? profiles.find((p) => p.id === activeBabyId) : undefined;
+  if (!active) return title;
+  return `${active.name}: ${title}`;
+}
+
+/** The id a NEW per-baby touch of tooth slot `slotId` gets. ToothRecord.id
+ * is a fixed 20-value slot string pre-Phase-3 (e.g.
+ * "upperLeft-centralIncisor"), not a generated id, so two babies touching
+ * the same slot would collide if both used the bare slot id. This
+ * composite id is only for records a baby is touching for the first
+ * time — see findToothRecordForBabySlot, which always prefers an
+ * existing record's own (possibly bare, legacy) id over this. */
+export function toothCompositeId(babyId: string, slotId: string): string {
+  return `${babyId}-${slotId}`;
+}
+
+/** Finds the record (if any) that `babyId` already owns for tooth slot
+ * `slotId` — whatever its stored id looks like: a legacy bare slot id
+ * (only possible when `babyId` is the legacy-default baby, exactly like
+ * every other per-baby store's undefined-babyId fallback) or a composite
+ * id from a previous per-baby touch. The slot is always derived from the
+ * record's own `position`/`type` fields, never assumed from `.id` — the
+ * Teeth screen's own slot-to-record map (a later checkpoint) must do the
+ * same, since `.id` is no longer reliably the slot id once composite ids
+ * exist. Returns undefined when this baby has never touched this slot;
+ * the Teeth checkpoint uses that to choose between `update(existing.id,
+ * ...)` (never renaming an existing record, bare-id legacy ones
+ * included) and creating a new one with `toothCompositeId(babyId,
+ * slotId)`. This function itself never writes anything. */
+export function findToothRecordForBabySlot(
+  items: ToothRecord[],
+  babyId: string,
+  slotId: string,
+  legacyDefaultBabyId: string | null
+): ToothRecord | undefined {
+  return items.find((item) => {
+    if (`${item.position}-${item.type}` !== slotId) return false;
+    if (item.babyId != null) return item.babyId === babyId;
+    return babyId === legacyDefaultBabyId;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3D — per-baby milestone seeding.
+// ---------------------------------------------------------------------------
+
+/** Gives `babyId` its own set of the 14 default milestones the first time
+ * it becomes active, without ever touching the legacy-default baby's
+ * existing (babyId-undefined) defaults — those remain owned entirely by
+ * seedDefaultMilestones() (src/lib/seed.ts, unchanged since before Phase
+ * 3) and are never duplicated or rewritten here.
+ *
+ * Deliberately a no-op whenever `babyId` is the legacy-default baby, or
+ * legacyDefaultBabyId isn't resolved yet — the latter covers the brief
+ * window during first-ever onboarding where setActiveBaby() fires for the
+ * very first baby before ensureLegacyDefaultBaby() has run; skipping here
+ * is always correct in that window, since a first baby's milestones are
+ * already handled by the original boot-time seeding.
+ *
+ * Also a no-op if `babyId` already owns any milestone (its own seeded set
+ * from a previous switch, or a custom one it created) — this is what
+ * keeps repeated switches and reloads from ever duplicating the set. Uses
+ * `add()` per item rather than `setAll()` so every other baby's existing
+ * milestones (legacy-default's included) are left completely untouched. */
+export function ensureMilestonesSeededForBaby(babyId: string): void {
+  const legacyDefaultBabyId = useLegacyDefaultBabyIdStore.getState().value;
+  if (legacyDefaultBabyId == null || babyId === legacyDefaultBabyId) return;
+
+  const { items, add } = useMilestoneStore.getState();
+  const alreadyHasOwn = items.some((m) => m.babyId === babyId);
+  if (alreadyHasOwn) return;
+
+  const now = nowIso();
+  for (const m of DEFAULT_MILESTONES) {
+    add({
+      id: generateId(),
+      babyId,
+      title: m.title,
+      category: m.category,
+      completed: false,
+      isCustom: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
 }

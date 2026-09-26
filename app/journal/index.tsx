@@ -9,6 +9,7 @@ import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useMemoryStore, useNoteStore } from '../../src/store';
+import { useBabyScoped } from '../../src/lib/babyScope';
 import { daysBetween, formatDate, isSameDay } from '../../src/lib/date';
 import { journalCategoryLabel } from '../../src/lib/labels';
 import { categoryColors, fontSize, palette, radius, spacing } from '../../src/theme';
@@ -80,8 +81,10 @@ function GroupSection({ title, items, onPressItem }: { title: string; items: Jou
 }
 
 export default function JournalScreen() {
-  const notes = useNoteStore((s) => s.items);
-  const memories = useMemoryStore((s) => s.items);
+  const rawNotes = useNoteStore((s) => s.items);
+  const notes = useBabyScoped(rawNotes);
+  const rawMemories = useMemoryStore((s) => s.items);
+  const memories = useBabyScoped(rawMemories);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<JournalCategory | 'all'>('all');

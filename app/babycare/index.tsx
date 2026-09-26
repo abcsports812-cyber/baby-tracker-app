@@ -12,6 +12,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useBabyCareStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime } from '../../src/lib/date';
 import { babyCareLabel } from '../../src/lib/labels';
@@ -30,7 +31,8 @@ const ACTIVITY_OPTIONS: { value: BabyCareActivity; label: string }[] = [
 ];
 
 export default function BabyCareScreen() {
-  const items = useBabyCareStore((s) => s.items);
+  const rawItems = useBabyCareStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useBabyCareStore((s) => s.add);
   const update = useBabyCareStore((s) => s.update);
   const remove = useBabyCareStore((s) => s.remove);
@@ -75,7 +77,7 @@ export default function BabyCareScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Baby care entry updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Baby care logged', 'sparkles');
     }
     setSheetOpen(false);

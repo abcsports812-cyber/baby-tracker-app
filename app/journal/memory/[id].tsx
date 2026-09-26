@@ -14,6 +14,7 @@ import { ChipSelect } from '../../../src/components/ui/ChipSelect';
 import { DateTimeField } from '../../../src/components/ui/DateTimeField';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 import { useMemoryStore, useMilestoneStore } from '../../../src/store';
+import { useBabyScoped } from '../../../src/lib/babyScope';
 import { nowIso } from '../../../src/lib/id';
 import { formatDate } from '../../../src/lib/date';
 import { journalCategoryLabel } from '../../../src/lib/labels';
@@ -25,10 +26,17 @@ const NO_MILESTONE = 'none';
 
 export default function MemoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const memories = useMemoryStore((s) => s.items);
+  // Scoped before lookup: an id reached via a stale deep link (a Search
+  // result, a saved link) that belongs to a baby other than the active one
+  // resolves to undefined here, falling through to the existing "not
+  // found" state below — the active baby can never open another baby's
+  // memory for viewing or editing this way.
+  const rawMemories = useMemoryStore((s) => s.items);
+  const memories = useBabyScoped(rawMemories);
   const update = useMemoryStore((s) => s.update);
   const remove = useMemoryStore((s) => s.remove);
-  const milestones = useMilestoneStore((s) => s.items);
+  const rawMilestones = useMilestoneStore((s) => s.items);
+  const milestones = useBabyScoped(rawMilestones);
 
   const memory = memories.find((m) => m.id === id);
   const relatedMilestone = memory?.relatedMilestoneId ? milestones.find((m) => m.id === memory.relatedMilestoneId) : undefined;

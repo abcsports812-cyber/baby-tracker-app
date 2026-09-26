@@ -14,6 +14,7 @@ import { RecordRow } from '../../src/components/ui/RecordRow';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useHealthRecordStore, useVaccinationStore } from '../../src/store';
+import { stampActiveBaby, useBabyScoped, withBabyPrefix } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { daysBetween, formatDate, formatDateTime } from '../../src/lib/date';
 import { healthRecordTypeLabel } from '../../src/lib/labels';
@@ -117,12 +118,14 @@ function VaxRow({ vax, isLast, onPress, onDelete }: { vax: Vaccination; isLast: 
 }
 
 export default function HealthScreen() {
-  const vaccinations = useVaccinationStore((s) => s.items);
+  const rawVaccinations = useVaccinationStore((s) => s.items);
+  const vaccinations = useBabyScoped(rawVaccinations);
   const addVax = useVaccinationStore((s) => s.add);
   const updateVax = useVaccinationStore((s) => s.update);
   const removeVax = useVaccinationStore((s) => s.remove);
 
-  const records = useHealthRecordStore((s) => s.items);
+  const rawRecords = useHealthRecordStore((s) => s.items);
+  const records = useBabyScoped(rawRecords);
   const addRecord = useHealthRecordStore((s) => s.add);
   const updateRecord = useHealthRecordStore((s) => s.update);
   const removeRecord = useHealthRecordStore((s) => s.remove);
@@ -197,7 +200,7 @@ export default function HealthScreen() {
       if (shouldSchedule && vaxNextDue) {
         notificationId = await withTimeout(
           scheduleReminderNotification({
-            title: `Vaccination due: ${vaxName.trim() || 'Vaccine'}`,
+            title: withBabyPrefix(`Vaccination due: ${vaxName.trim() || 'Vaccine'}`),
             body: vaxDoseNumber.trim() || undefined,
             date: vaxNextDue,
           }),
@@ -221,7 +224,7 @@ export default function HealthScreen() {
       updateVax(vaxEditId, { ...payload, updatedAt: now });
       showToast('Vaccination updated', 'checkmark-circle');
     } else {
-      addVax({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      addVax(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Vaccination saved', 'shield-checkmark');
     }
     setVaxSheet(false);
@@ -260,7 +263,7 @@ export default function HealthScreen() {
       updateRecord(recordEditId, { ...payload, updatedAt: now });
       showToast('Health record updated', 'checkmark-circle');
     } else {
-      addRecord({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      addRecord(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Health record saved', 'medkit');
     }
     setRecordSheet(false);

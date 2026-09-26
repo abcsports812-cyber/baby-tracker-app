@@ -2,7 +2,7 @@ import { useMilestoneStore } from '../store';
 import { generateId, nowIso } from './id';
 import type { Milestone, MilestoneCategory } from '../types/models';
 
-const DEFAULT_MILESTONES: { title: string; category: MilestoneCategory }[] = [
+export const DEFAULT_MILESTONES: { title: string; category: MilestoneCategory }[] = [
   { title: 'First smile', category: 'social' },
   { title: 'Rolled over', category: 'motor' },
   { title: 'Held head up', category: 'motor' },

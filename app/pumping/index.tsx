@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { BarChart } from '../../src/components/charts/BarChart';
 import { useFeedingStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate, formatDuration, formatTime, isSameDay, last7Days, toISODate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -54,7 +55,8 @@ function PumpStatCard({ icon, label, value }: { icon: keyof typeof Ionicons.glyp
 }
 
 export default function PumpingScreen() {
-  const items = useFeedingStore((s) => s.items);
+  const rawItems = useFeedingStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useFeedingStore((s) => s.add);
   const update = useFeedingStore((s) => s.update);
   const remove = useFeedingStore((s) => s.remove);
@@ -147,7 +149,7 @@ export default function PumpingScreen() {
   const startPumping = () => {
     if (active) return;
     const startNow = nowIso();
-    add({ id: generateId(), type: 'pump', startTime: startNow, createdAt: startNow, updatedAt: startNow });
+    add(stampActiveBaby({ id: generateId(), type: 'pump', startTime: startNow, createdAt: startNow, updatedAt: startNow }));
     showToast('Pumping started', 'timer-outline');
   };
 
@@ -234,7 +236,7 @@ export default function PumpingScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Pumping session saved', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Pumping session saved', 'checkmark-circle');
     }
     setSheetOpen(false);

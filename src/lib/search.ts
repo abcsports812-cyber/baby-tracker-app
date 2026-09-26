@@ -18,6 +18,7 @@ import {
   useToothStore,
   useVaccinationStore,
 } from '../store';
+import { useBabyScoped } from './babyScope';
 import { GUIDES, GUIDE_ACTIVITIES, getGuideCategoryById } from '../data/guides';
 import {
   activityLabel,
@@ -79,21 +80,24 @@ function haystackOf(...parts: (string | undefined)[]): string {
  * filtering (see useSearchResults) is a cheap scan over an already
  * pre-synthesized, pre-lowercased array. */
 export function useAllSearchResults(): SearchResult[] {
-  const notes = useNoteStore((s) => s.items);
-  const memories = useMemoryStore((s) => s.items);
-  const feeding = useFeedingStore((s) => s.items);
-  const diaper = useDiaperStore((s) => s.items);
-  const sleep = useSleepStore((s) => s.items);
-  const growth = useGrowthStore((s) => s.items);
-  const milestones = useMilestoneStore((s) => s.items);
-  const vaccinations = useVaccinationStore((s) => s.items);
-  const healthRecords = useHealthRecordStore((s) => s.items);
-  const appointments = useAppointmentStore((s) => s.items);
-  const reminders = useReminderStore((s) => s.items);
-  const babyCare = useBabyCareStore((s) => s.items);
-  const activities = useActivityStore((s) => s.items);
+  const notes = useBabyScoped(useNoteStore((s) => s.items));
+  const memories = useBabyScoped(useMemoryStore((s) => s.items));
+  const feeding = useBabyScoped(useFeedingStore((s) => s.items));
+  const diaper = useBabyScoped(useDiaperStore((s) => s.items));
+  const sleep = useBabyScoped(useSleepStore((s) => s.items));
+  const growth = useBabyScoped(useGrowthStore((s) => s.items));
+  const milestones = useBabyScoped(useMilestoneStore((s) => s.items));
+  const vaccinations = useBabyScoped(useVaccinationStore((s) => s.items));
+  const healthRecords = useBabyScoped(useHealthRecordStore((s) => s.items));
+  const appointments = useBabyScoped(useAppointmentStore((s) => s.items));
+  const reminders = useBabyScoped(useReminderStore((s) => s.items));
+  const babyCare = useBabyScoped(useBabyCareStore((s) => s.items));
+  const activities = useBabyScoped(useActivityStore((s) => s.items));
+  // Caregivers are global (Phase 1 decision) — intentionally unscoped.
   const caregivers = useCaregiverStore((s) => s.items);
-  const teeth = useToothStore((s) => s.items);
+  const teeth = useBabyScoped(useToothStore((s) => s.items));
+  // The legacy singleton mirror already reflects the active baby correctly
+  // (see syncLegacyProfileMirror, Phase 2) — no scoping needed here.
   const profile = useBabyProfileStore((s) => s.value);
 
   return useMemo(() => {

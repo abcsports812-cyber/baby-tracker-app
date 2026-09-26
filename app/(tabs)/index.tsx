@@ -10,6 +10,7 @@ import { QuickActionButton } from '../../src/components/ui/QuickActionButton';
 import { RecordRow } from '../../src/components/ui/RecordRow';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useBabyProfileStore, useDiaperStore, useFeedingStore, useGrowthStore, useMilestoneStore, useSettingsStore, useSleepStore } from '../../src/store';
+import { useBabyScoped } from '../../src/lib/babyScope';
 import { fontSize, palette, radius, spacing } from '../../src/theme';
 import { formatDate, formatDuration, formatTime, isSameDay } from '../../src/lib/date';
 import { formatWeight } from '../../src/lib/units';
@@ -18,11 +19,11 @@ import { eventTimeLabel, useTimelineEvents } from '../../src/lib/timeline';
 export default function HomeScreen() {
   const profile = useBabyProfileStore((s) => s.value);
   const weightUnit = useSettingsStore((s) => s.value.weightUnit);
-  const feeding = useFeedingStore((s) => s.items);
-  const diaper = useDiaperStore((s) => s.items);
-  const sleep = useSleepStore((s) => s.items);
-  const growth = useGrowthStore((s) => s.items);
-  const milestones = useMilestoneStore((s) => s.items);
+  const feeding = useBabyScoped(useFeedingStore((s) => s.items));
+  const diaper = useBabyScoped(useDiaperStore((s) => s.items));
+  const sleep = useBabyScoped(useSleepStore((s) => s.items));
+  const growth = useBabyScoped(useGrowthStore((s) => s.items));
+  const milestones = useBabyScoped(useMilestoneStore((s) => s.items));
 
   const today = useMemo(() => new Date(), []);
   const timeline = useTimelineEvents(today, 'desc');

@@ -15,6 +15,7 @@ import {
   useToothStore,
   useVaccinationStore,
 } from '../store';
+import { useBabyScoped } from './babyScope';
 import { formatDuration, formatTime, isSameDay } from './date';
 import { activityLabel, babyCareLabel } from './labels';
 import { toothSlotLabel } from './teeth';
@@ -29,18 +30,18 @@ export interface TimelineEvent {
 }
 
 export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): TimelineEvent[] {
-  const feeding = useFeedingStore((s) => s.items);
-  const diaper = useDiaperStore((s) => s.items);
-  const sleep = useSleepStore((s) => s.items);
-  const health = useHealthRecordStore((s) => s.items);
-  const vaccinations = useVaccinationStore((s) => s.items);
-  const appointments = useAppointmentStore((s) => s.items);
-  const milestones = useMilestoneStore((s) => s.items);
-  const babyCare = useBabyCareStore((s) => s.items);
-  const activities = useActivityStore((s) => s.items);
-  const memories = useMemoryStore((s) => s.items);
-  const notes = useNoteStore((s) => s.items);
-  const teeth = useToothStore((s) => s.items);
+  const feeding = useBabyScoped(useFeedingStore((s) => s.items));
+  const diaper = useBabyScoped(useDiaperStore((s) => s.items));
+  const sleep = useBabyScoped(useSleepStore((s) => s.items));
+  const health = useBabyScoped(useHealthRecordStore((s) => s.items));
+  const vaccinations = useBabyScoped(useVaccinationStore((s) => s.items));
+  const appointments = useBabyScoped(useAppointmentStore((s) => s.items));
+  const milestones = useBabyScoped(useMilestoneStore((s) => s.items));
+  const babyCare = useBabyScoped(useBabyCareStore((s) => s.items));
+  const activities = useBabyScoped(useActivityStore((s) => s.items));
+  const memories = useBabyScoped(useMemoryStore((s) => s.items));
+  const notes = useBabyScoped(useNoteStore((s) => s.items));
+  const teeth = useBabyScoped(useToothStore((s) => s.items));
 
   return useMemo(() => {
     const events: TimelineEvent[] = [];
@@ -198,18 +199,18 @@ export function eventTimeLabel(event: TimelineEvent): string {
 }
 
 export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKey[]> {
-  const feeding = useFeedingStore((s) => s.items);
-  const diaper = useDiaperStore((s) => s.items);
-  const sleep = useSleepStore((s) => s.items);
-  const health = useHealthRecordStore((s) => s.items);
-  const vaccinations = useVaccinationStore((s) => s.items);
-  const appointments = useAppointmentStore((s) => s.items);
-  const milestones = useMilestoneStore((s) => s.items);
-  const babyCare = useBabyCareStore((s) => s.items);
-  const activities = useActivityStore((s) => s.items);
-  const memories = useMemoryStore((s) => s.items);
-  const notes = useNoteStore((s) => s.items);
-  const teeth = useToothStore((s) => s.items);
+  const feeding = useBabyScoped(useFeedingStore((s) => s.items));
+  const diaper = useBabyScoped(useDiaperStore((s) => s.items));
+  const sleep = useBabyScoped(useSleepStore((s) => s.items));
+  const health = useBabyScoped(useHealthRecordStore((s) => s.items));
+  const vaccinations = useBabyScoped(useVaccinationStore((s) => s.items));
+  const appointments = useBabyScoped(useAppointmentStore((s) => s.items));
+  const milestones = useBabyScoped(useMilestoneStore((s) => s.items));
+  const babyCare = useBabyScoped(useBabyCareStore((s) => s.items));
+  const activities = useBabyScoped(useActivityStore((s) => s.items));
+  const memories = useBabyScoped(useMemoryStore((s) => s.items));
+  const notes = useBabyScoped(useNoteStore((s) => s.items));
+  const teeth = useBabyScoped(useToothStore((s) => s.items));
 
   return useMemo(() => {
     const year = monthDate.getFullYear();

@@ -15,6 +15,14 @@ import { DateTimeField } from '../../src/components/ui/DateTimeField';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { ToothChart } from '../../src/components/ui/ToothChart';
 import { useMilestoneStore, useToothStore } from '../../src/store';
+import {
+  findToothRecordForBabySlot,
+  stampActiveBaby,
+  toothCompositeId,
+  useActiveBabyId,
+  useBabyScoped,
+  useLegacyDefaultBabyId,
+} from '../../src/lib/babyScope';
 import { nowIso } from '../../src/lib/id';
 import { TOOTH_CHART, toothSlotLabel } from '../../src/lib/teeth';
 import { teethingSymptomLabel, toothStatusLabel } from '../../src/lib/labels';
@@ -36,11 +44,15 @@ const FILTER_OPTIONS: { value: 'all' | ToothStatus; label: string }[] = [
 const SYMPTOM_OPTIONS = Object.keys(teethingSymptomLabel) as TeethingSymptom[];
 
 export default function TeethScreen() {
-  const items = useToothStore((s) => s.items);
+  const rawItems = useToothStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useToothStore((s) => s.add);
   const update = useToothStore((s) => s.update);
   const remove = useToothStore((s) => s.remove);
-  const milestones = useMilestoneStore((s) => s.items);
+  const rawMilestones = useMilestoneStore((s) => s.items);
+  const milestones = useBabyScoped(rawMilestones);
+  const activeBabyId = useActiveBabyId();
+  const legacyDefaultBabyId = useLegacyDefaultBabyId();
 
   const [filter, setFilter] = useState<'all' | ToothStatus>('all');
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
@@ -55,9 +67,13 @@ export default function TeethScreen() {
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [relatedMilestoneId, setRelatedMilestoneId] = useState(NO_MILESTONE);
 
+  // Keyed by the record's own position/type, never by `.id` — a baby's
+  // record for a slot may carry a legacy bare slot id or a composite id
+  // (see findToothRecordForBabySlot), but the chart's lookup key is always
+  // the slot itself, derived the same way regardless of which id shape.
   const records = useMemo(() => {
     const map: Record<string, ToothRecord | undefined> = {};
-    for (const r of items) map[r.id] = r;
+    for (const r of items) map[`${r.position}-${r.type}`] = r;
     return map;
   }, [items]);
 
@@ -89,13 +105,16 @@ export default function TeethScreen() {
   };
 
   const save = () => {
-    if (!editingSlotId || !editingSlot) return;
+    if (!editingSlotId || !editingSlot || !activeBabyId) return;
     const now = nowIso();
 
     const hadEmergedBefore = editingRecord?.status === 'emerging' || editingRecord?.status === 'erupted';
     const nowHasEmerged = status === 'emerging' || status === 'erupted';
+    // Compared by slot (position/type), not `.id` — the tooth being edited
+    // may now have a composite id, which would never equal editingSlotId
+    // (a bare slot string) and incorrectly count itself as "another" tooth.
     const anyOtherToothHasEmerged = items.some(
-      (i) => i.id !== editingSlotId && (i.status === 'emerging' || i.status === 'erupted')
+      (i) => `${i.position}-${i.type}` !== editingSlotId && (i.status === 'emerging' || i.status === 'erupted')
     );
 
     const payload = {
@@ -110,10 +129,17 @@ export default function TeethScreen() {
       relatedMilestoneId: relatedMilestoneId === NO_MILESTONE ? undefined : relatedMilestoneId,
     };
 
-    if (editingRecord) {
-      update(editingSlotId, { ...payload, updatedAt: now });
+    // Resolve the active baby's existing record for this slot by its own
+    // stored id (bare legacy slot id or a prior composite id), never by
+    // assuming editingSlotId is itself a store id — see
+    // findToothRecordForBabySlot. Editing always updates that exact
+    // record in place; only a slot this baby has never touched gets a
+    // brand-new composite-id record.
+    const existing = findToothRecordForBabySlot(rawItems, activeBabyId, editingSlotId, legacyDefaultBabyId);
+    if (existing) {
+      update(existing.id, { ...payload, updatedAt: now });
     } else {
-      add({ id: editingSlotId, ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: toothCompositeId(activeBabyId, editingSlotId), ...payload, createdAt: now, updatedAt: now }));
     }
 
     // A one-time, dismissible suggestion shown only the moment the very
@@ -253,7 +279,10 @@ export default function TeethScreen() {
         confirmLabel="Reset"
         onCancel={() => setResetOpen(false)}
         onConfirm={() => {
-          if (editingSlotId) remove(editingSlotId);
+          if (editingSlotId && activeBabyId) {
+            const existing = findToothRecordForBabySlot(rawItems, activeBabyId, editingSlotId, legacyDefaultBabyId);
+            if (existing) remove(existing.id);
+          }
           setResetOpen(false);
           setEditingSlotId(null);
           showToast('Tooth reset', 'refresh');

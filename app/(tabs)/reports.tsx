@@ -14,6 +14,7 @@ import {
   useSleepStore,
   useToothStore,
 } from '../../src/store';
+import { useBabyScoped } from '../../src/lib/babyScope';
 import { last7Days, toISODate } from '../../src/lib/date';
 import { TOOTH_CHART } from '../../src/lib/teeth';
 import { categoryColors, fontSize, palette, spacing } from '../../src/theme';
@@ -23,13 +24,13 @@ function weekLabel(d: Date) {
 }
 
 export default function ReportsScreen() {
-  const feeding = useFeedingStore((s) => s.items);
-  const diaper = useDiaperStore((s) => s.items);
-  const sleep = useSleepStore((s) => s.items);
-  const growth = useGrowthStore((s) => s.items);
-  const milestones = useMilestoneStore((s) => s.items);
-  const activities = useActivityStore((s) => s.items);
-  const teeth = useToothStore((s) => s.items);
+  const feeding = useBabyScoped(useFeedingStore((s) => s.items));
+  const diaper = useBabyScoped(useDiaperStore((s) => s.items));
+  const sleep = useBabyScoped(useSleepStore((s) => s.items));
+  const growth = useBabyScoped(useGrowthStore((s) => s.items));
+  const milestones = useBabyScoped(useMilestoneStore((s) => s.items));
+  const activities = useBabyScoped(useActivityStore((s) => s.items));
+  const teeth = useBabyScoped(useToothStore((s) => s.items));
 
   const days = useMemo(() => last7Days(), []);
 

@@ -15,6 +15,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useMilestoneStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate } from '../../src/lib/date';
 import { milestoneCategoryLabel } from '../../src/lib/labels';
@@ -25,7 +26,8 @@ import type { Milestone, MilestoneCategory } from '../../src/types/models';
 const CATEGORIES: MilestoneCategory[] = ['motor', 'communication', 'social', 'cognitive', 'feeding', 'sleep', 'other'];
 
 export default function MilestonesScreen() {
-  const items = useMilestoneStore((s) => s.items);
+  const rawItems = useMilestoneStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useMilestoneStore((s) => s.add);
   const update = useMilestoneStore((s) => s.update);
   const remove = useMilestoneStore((s) => s.remove);
@@ -98,7 +100,7 @@ export default function MilestonesScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast(completed ? 'Milestone achieved!' : 'Milestone updated', completed ? 'star' : 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, isCustom: true, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, isCustom: true, createdAt: now, updatedAt: now }));
       showToast('Milestone added', 'star');
     }
     setSheetOpen(false);

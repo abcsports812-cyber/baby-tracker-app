@@ -14,6 +14,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { LineChart } from '../../src/components/charts/LineChart';
 import { useBabyProfileStore, useGrowthStore, useSettingsStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { daysBetween, formatDate, formatShortDate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -80,7 +81,8 @@ function GrowthChart({ title, unit, data, color }: { title: string; unit: string
 }
 
 export default function GrowthScreen() {
-  const items = useGrowthStore((s) => s.items);
+  const rawItems = useGrowthStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useGrowthStore((s) => s.add);
   const update = useGrowthStore((s) => s.update);
   const remove = useGrowthStore((s) => s.remove);
@@ -201,7 +203,7 @@ export default function GrowthScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Measurement updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Measurement saved', 'checkmark-circle');
     }
     setSheetOpen(false);

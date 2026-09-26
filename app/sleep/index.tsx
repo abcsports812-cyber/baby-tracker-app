@@ -14,6 +14,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { BarChart } from '../../src/components/charts/BarChart';
 import { useSleepStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDuration, formatTime, isSameDay, last7Days, toISODate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -21,7 +22,8 @@ import { categoryColors, fontSize, palette, spacing } from '../../src/theme';
 import type { SleepKind, SleepRecord } from '../../src/types/models';
 
 export default function SleepScreen() {
-  const items = useSleepStore((s) => s.items);
+  const rawItems = useSleepStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useSleepStore((s) => s.add);
   const update = useSleepStore((s) => s.update);
   const remove = useSleepStore((s) => s.remove);
@@ -62,7 +64,7 @@ export default function SleepScreen() {
   }, [items]);
 
   const startSleep = (k: SleepKind) => {
-    add({ id: generateId(), kind: k, startTime: nowIso(), createdAt: nowIso(), updatedAt: nowIso() });
+    add(stampActiveBaby({ id: generateId(), kind: k, startTime: nowIso(), createdAt: nowIso(), updatedAt: nowIso() }));
     showToast(`${k === 'nap' ? 'Nap' : 'Night sleep'} started`, 'moon');
   };
 
@@ -103,7 +105,7 @@ export default function SleepScreen() {
       update(editingId, { ...payload, updatedAt: now });
       showToast('Sleep entry updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...payload, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...payload, createdAt: now, updatedAt: now }));
       showToast('Sleep entry added', 'checkmark-circle');
     }
     setSheetOpen(false);

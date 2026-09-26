@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { BarChart } from '../../src/components/charts/BarChart';
 import { useDiaperStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatTime, isSameDay, last7Days, toISODate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -28,7 +29,8 @@ const QUICK_OPTIONS: { type: DiaperType; label: string; icon: keyof typeof Ionic
 ];
 
 export default function DiaperScreen() {
-  const items = useDiaperStore((s) => s.items);
+  const rawItems = useDiaperStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useDiaperStore((s) => s.add);
   const update = useDiaperStore((s) => s.update);
   const remove = useDiaperStore((s) => s.remove);
@@ -55,7 +57,7 @@ export default function DiaperScreen() {
   }, [items]);
 
   const quickLog = (t: DiaperType) => {
-    add({ id: generateId(), type: t, time: nowIso(), createdAt: nowIso(), updatedAt: nowIso() });
+    add(stampActiveBaby({ id: generateId(), type: t, time: nowIso(), createdAt: nowIso(), updatedAt: nowIso() }));
     showToast('Diaper logged', 'checkmark-circle');
   };
 
@@ -81,7 +83,7 @@ export default function DiaperScreen() {
       update(editingId, { type, time: when.toISOString(), notes: notes.trim() || undefined, updatedAt: now });
       showToast('Diaper entry updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), type, time: when.toISOString(), notes: notes.trim() || undefined, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), type, time: when.toISOString(), notes: notes.trim() || undefined, createdAt: now, updatedAt: now }));
       showToast('Diaper logged', 'checkmark-circle');
     }
     setSheetOpen(false);

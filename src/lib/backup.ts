@@ -1,16 +1,19 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import {
+  useActiveBabyIdStore,
   useActivityStore,
   useAppointmentStore,
   useBabyCareStore,
   useBabyProfileStore,
+  useBabyProfilesStore,
   useCaregiverStore,
   useDiaperStore,
   useFavoriteSoundsStore,
   useFeedingStore,
   useGrowthStore,
   useHealthRecordStore,
+  useLegacyDefaultBabyIdStore,
   useMemoryStore,
   useMilestoneStore,
   useNoteStore,
@@ -66,6 +69,9 @@ export function buildBackup(): BackupFile {
     platform: currentPlatform(),
     data: {
       babyProfile: useBabyProfileStore.getState().value,
+      babyProfiles: useBabyProfilesStore.getState().items,
+      activeBabyId: useActiveBabyIdStore.getState().value,
+      legacyDefaultBabyId: useLegacyDefaultBabyIdStore.getState().value,
       settings: { weightUnit, heightUnit, notificationsEnabled, themeMode, language },
       stores,
     },
@@ -150,13 +156,39 @@ export function validateBackup(raw: unknown): BackupValidationResult {
     return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
   }
 
-  const { babyProfile, settings, stores } = data as Record<string, unknown>;
+  const { babyProfile, babyProfiles, activeBabyId, legacyDefaultBabyId, settings, stores } = data as Record<string, unknown>;
 
   if (babyProfile !== null && !isPlainObject(babyProfile)) {
     return { valid: false, error: 'This backup file is corrupted (invalid baby profile).' };
   }
   if (babyProfile && (typeof babyProfile.id !== 'string' || typeof babyProfile.name !== 'string' || typeof babyProfile.dateOfBirth !== 'string')) {
     return { valid: false, error: 'This backup file is corrupted (invalid baby profile).' };
+  }
+
+  // V2 (Phase 3G): `babyProfiles` is present only on a multi-baby-aware
+  // backup — a V1 file simply doesn't have the key at all, and that absence
+  // is exactly what routes restore.ts to the V1 single-baby compatibility
+  // path instead. Nothing here is required, or even inspected, for a V1 file.
+  if (babyProfiles !== undefined) {
+    if (!Array.isArray(babyProfiles)) {
+      return { valid: false, error: 'This backup file is corrupted (invalid baby profiles).' };
+    }
+    const ids = new Set<string>();
+    for (const entry of babyProfiles) {
+      if (!isPlainObject(entry) || typeof entry.id !== 'string' || typeof entry.name !== 'string' || typeof entry.dateOfBirth !== 'string') {
+        return { valid: false, error: 'This backup file is corrupted (invalid baby profiles).' };
+      }
+      if (ids.has(entry.id)) {
+        return { valid: false, error: 'This backup file is corrupted (duplicate baby profile).' };
+      }
+      ids.add(entry.id);
+    }
+    if (activeBabyId !== null && (typeof activeBabyId !== 'string' || !ids.has(activeBabyId))) {
+      return { valid: false, error: 'This backup file is corrupted (invalid active baby).' };
+    }
+    if (legacyDefaultBabyId !== null && (typeof legacyDefaultBabyId !== 'string' || !ids.has(legacyDefaultBabyId))) {
+      return { valid: false, error: 'This backup file is corrupted (invalid default baby).' };
+    }
   }
 
   if (!isPlainObject(settings)) {
@@ -189,6 +221,12 @@ export function validateBackup(raw: unknown): BackupValidationResult {
         }
       } else if (!isPlainObject(entry) || typeof entry.id !== 'string') {
         return { valid: false, error: `This backup file is corrupted (invalid ${key} data).` };
+      } else if (entry.babyId !== undefined && typeof entry.babyId !== 'string') {
+        // A record's babyId is optional (legacy/undefined is always valid),
+        // but when present it must be a string — never silently coerced or
+        // stripped, since that's exactly what Section 3G's compatibility
+        // rules forbid.
+        return { valid: false, error: `This backup file is corrupted (invalid ${key} data).` };
       }
     }
   }
@@ -199,7 +237,15 @@ export function validateBackup(raw: unknown): BackupValidationResult {
   for (const key of OPTIONAL_STORE_ARRAY_KEYS) {
     const value = (stores as Record<string, unknown>)[key];
     if (value === undefined) continue;
-    if (!Array.isArray(value) || value.some((entry) => !isPlainObject(entry) || typeof entry.id !== 'string')) {
+    if (
+      !Array.isArray(value) ||
+      value.some(
+        (entry) =>
+          !isPlainObject(entry) ||
+          typeof entry.id !== 'string' ||
+          (entry.babyId !== undefined && typeof entry.babyId !== 'string')
+      )
+    ) {
       return { valid: false, error: `This backup file is corrupted (invalid ${key} data).` };
     }
   }
@@ -211,7 +257,15 @@ export function validateBackup(raw: unknown): BackupValidationResult {
 }
 
 export interface BackupSummary {
+  /** V1-shaped convenience field — the primary/active baby's name, or null.
+   * Always populated; for a V2 backup with 2+ babies, prefer babyCount/
+   * babyNames for display and treat this as a fallback label only. */
   babyName: string | null;
+  /** Number of baby profiles this backup contains. 0 or 1 for a V1 backup
+   * (mirrors babyName), the real count for a V2 backup. */
+  babyCount: number;
+  /** Every baby profile's name in this backup, in the backup's own order. */
+  babyNames: string[];
   exportedAt: string;
   appVersion: string;
   counts: {
@@ -239,8 +293,13 @@ export interface BackupSummary {
  * confirmation. */
 export function getBackupSummary(backup: BackupFile): BackupSummary {
   const s = backup.data.stores;
+  // V1 backups have no babyProfiles array at all — fall back to the single
+  // babyProfile field so a V1 file still summarizes as exactly one baby.
+  const profiles = backup.data.babyProfiles ?? (backup.data.babyProfile ? [backup.data.babyProfile] : []);
   return {
     babyName: backup.data.babyProfile?.name ?? null,
+    babyCount: profiles.length,
+    babyNames: profiles.map((p) => p.name),
     exportedAt: backup.exportedAt,
     appVersion: backup.appVersion,
     counts: {

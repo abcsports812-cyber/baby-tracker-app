@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { BarChart } from '../../src/components/charts/BarChart';
 import { useFeedingStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatTime, isSameDay, last7Days, toISODate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
@@ -22,7 +23,8 @@ import { fontSize, palette, spacing } from '../../src/theme';
 import type { BreastSide, FeedingRecord, FeedingType } from '../../src/types/models';
 
 export default function FeedingScreen() {
-  const items = useFeedingStore((s) => s.items);
+  const rawItems = useFeedingStore((s) => s.items);
+  const items = useBabyScoped(rawItems);
   const add = useFeedingStore((s) => s.add);
   const update = useFeedingStore((s) => s.update);
   const remove = useFeedingStore((s) => s.remove);
@@ -111,7 +113,7 @@ export default function FeedingScreen() {
       update(editingId, { ...base, updatedAt: now });
       showToast('Feeding updated', 'checkmark-circle');
     } else {
-      add({ id: generateId(), ...base, createdAt: now, updatedAt: now });
+      add(stampActiveBaby({ id: generateId(), ...base, createdAt: now, updatedAt: now }));
       showToast('Feeding saved', 'checkmark-circle');
     }
     setSheetOpen(false);
