@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
@@ -10,7 +10,8 @@ import { FormField } from '../../src/components/ui/FormField';
 import { DateTimeField } from '../../src/components/ui/DateTimeField';
 import { ChipSelect } from '../../src/components/ui/ChipSelect';
 import { Button } from '../../src/components/ui/Button';
-import { useBabyProfileStore, useSettingsStore } from '../../src/store';
+import { useBabyProfilesStore, useSettingsStore } from '../../src/store';
+import { ensureLegacyDefaultBaby, setActiveBaby, syncLegacyProfileMirror, useActiveBabyId } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { showToast } from '../../src/components/ui/Toast';
 import { kgToDisplay, cmToDisplay, weightToKg, heightToCm } from '../../src/lib/units';
@@ -18,10 +19,21 @@ import { palette, spacing } from '../../src/theme';
 import type { Gender } from '../../src/types/models';
 
 export default function EditProfileScreen() {
-  const profile = useBabyProfileStore((s) => s.value);
-  const setProfile = useBabyProfileStore((s) => s.set);
+  // `new=1` (used by Manage Babies' own "Add" button) always means a blank
+  // form, even while a baby is already active — otherwise the bare
+  // fallback below (no id -> active baby) would make "Add" reopen an
+  // edit of whichever baby is currently active instead of creating one.
+  const { id, new: isNewParam } = useLocalSearchParams<{ id?: string; new?: string }>();
+  const profiles = useBabyProfilesStore((s) => s.items);
+  const addProfile = useBabyProfilesStore((s) => s.add);
+  const updateProfile = useBabyProfilesStore((s) => s.update);
+  const activeBabyId = useActiveBabyId();
   const weightUnit = useSettingsStore((s) => s.value.weightUnit);
   const heightUnit = useSettingsStore((s) => s.value.heightUnit);
+
+  const targetId = isNewParam === '1' ? undefined : id ?? activeBabyId ?? undefined;
+  const profile = targetId ? profiles.find((p) => p.id === targetId) : undefined;
+  const isNew = !profile;
 
   const [name, setName] = useState(profile?.name ?? '');
   const [dob, setDob] = useState(profile ? new Date(profile.dateOfBirth) : new Date());
@@ -46,8 +58,7 @@ export default function EditProfileScreen() {
 
   const save = () => {
     const now = nowIso();
-    setProfile({
-      id: profile?.id ?? generateId(),
+    const payload = {
       name: name.trim() || 'Baby',
       dateOfBirth: dob.toISOString().slice(0, 10),
       gender,
@@ -56,16 +67,25 @@ export default function EditProfileScreen() {
       bloodType: bloodType.trim() || undefined,
       photoUri,
       notes: notes.trim() || undefined,
-      createdAt: profile?.createdAt ?? now,
-      updatedAt: now,
-    });
-    showToast('Profile saved', 'heart');
+    };
+
+    if (profile) {
+      updateProfile(profile.id, { ...payload, updatedAt: now });
+      syncLegacyProfileMirror();
+      showToast('Profile saved', 'heart');
+    } else {
+      const newProfile = { id: generateId(), ...payload, createdAt: now, updatedAt: now };
+      addProfile(newProfile);
+      setActiveBaby(newProfile.id);
+      ensureLegacyDefaultBaby(newProfile.id);
+      showToast('Baby added', 'heart');
+    }
     router.back();
   };
 
   return (
     <Screen>
-      <ModuleHeader illustration="babyProfile" title={profile ? 'Edit Profile' : 'Baby Profile'} />
+      <ModuleHeader illustration="babyProfile" title={isNew ? 'Add Baby' : 'Edit Baby'} />
 
       <Pressable style={styles.photoPicker} onPress={pickPhoto}>
         {photoUri ? (
@@ -95,7 +115,7 @@ export default function EditProfileScreen() {
       <FormField label="Blood type" value={bloodType} onChangeText={setBloodType} placeholder="e.g. O+" optional />
       <FormField label="Notes" value={notes} onChangeText={setNotes} multiline optional />
 
-      <Button label="Save profile" icon="checkmark" onPress={save} fullWidth size="lg" style={{ marginTop: spacing.md }} />
+      <Button label={isNew ? 'Add baby' : 'Save profile'} icon="checkmark" onPress={save} fullWidth size="lg" style={{ marginTop: spacing.md }} />
     </Screen>
   );
 }

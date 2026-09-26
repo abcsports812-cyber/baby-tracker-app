@@ -23,7 +23,30 @@ import type {
   Vaccination,
 } from '../types/models';
 
+// Multiple Baby Profiles V1 — Phase 1 (data foundation only).
+//
+// useBabyProfileStore below is UNCHANGED and remains the live store every
+// existing screen reads/writes until Phase 2 cuts them over. The new
+// collection (useBabyProfilesStore) and the migration that populates it
+// from this singleton are purely additive in Phase 1 — nothing existing
+// screens do today changes behavior yet.
 export const useBabyProfileStore = createSingletonStore<BabyProfile | null>('babyProfile', null);
+
+// The multi-profile collection. Not yet read by any screen — Phase 2 wires
+// screens to useActiveBabyProfile() (src/lib/babyScope.ts) instead of the
+// singleton above.
+export const useBabyProfilesStore = createCollectionStore<BabyProfile>('babyProfiles');
+
+// Which baby is currently active. Changes whenever the user switches.
+export const useActiveBabyIdStore = createSingletonStore<string | null>('activeBabyId', null);
+
+// The id of the one baby that existed before Multiple Baby Profiles
+// shipped (or, for a fresh install, the first baby ever created). Set
+// once and never changed again — see src/lib/babyScope.ts, which uses it
+// as the fallback owner for any pre-existing record with no babyId, so a
+// later switch to a different active baby can never make those legacy
+// records appear to belong to the wrong baby.
+export const useLegacyDefaultBabyIdStore = createSingletonStore<string | null>('legacyDefaultBabyId', null);
 
 export const useSettingsStore = createSingletonStore<AppSettings>('settings', {
   weightUnit: 'kg',

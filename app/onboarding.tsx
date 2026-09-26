@@ -11,7 +11,8 @@ import { DateTimeField } from '../src/components/ui/DateTimeField';
 import { IllustrationBadge } from '../src/components/ui/IllustrationBadge';
 import { ChipSelect } from '../src/components/ui/ChipSelect';
 import { fontSize, palette, spacing } from '../src/theme';
-import { useBabyProfileStore, useSettingsStore } from '../src/store';
+import { useBabyProfilesStore, useSettingsStore } from '../src/store';
+import { ensureLegacyDefaultBaby, setActiveBaby } from '../src/lib/babyScope';
 import { generateId, nowIso } from '../src/lib/id';
 import type { Gender } from '../src/types/models';
 
@@ -24,7 +25,7 @@ export default function OnboardingScreen() {
   const [gender, setGender] = useState<Gender>('unspecified');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
 
-  const setProfile = useBabyProfileStore((s) => s.set);
+  const addProfile = useBabyProfilesStore((s) => s.add);
   const patchSettings = useSettingsStore((s) => s.patch);
 
   const pickPhoto = async () => {
@@ -43,7 +44,7 @@ export default function OnboardingScreen() {
 
   const finish = () => {
     const now = nowIso();
-    setProfile({
+    const newProfile = {
       id: generateId(),
       name: name.trim() || 'Baby',
       dateOfBirth: dob.toISOString().slice(0, 10),
@@ -51,7 +52,10 @@ export default function OnboardingScreen() {
       photoUri,
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    addProfile(newProfile);
+    setActiveBaby(newProfile.id);
+    ensureLegacyDefaultBaby(newProfile.id);
     patchSettings({ onboardingCompleted: true });
     router.replace('/(tabs)');
   };

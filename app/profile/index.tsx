@@ -1,128 +1,211 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
-import { useBabyProfileStore, useSettingsStore } from '../../src/store';
-import { calculateAge, formatDate } from '../../src/lib/date';
-import { formatHeight, formatWeight } from '../../src/lib/units';
+import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
+import { EmptyState } from '../../src/components/ui/EmptyState';
+import { useBabyProfilesStore } from '../../src/store';
+import { setActiveBaby, useActiveBabyId, useLegacyDefaultBabyId, useUnmigratedLegacyRecordCount } from '../../src/lib/babyScope';
+import { calculateAge } from '../../src/lib/date';
+import { showToast } from '../../src/components/ui/Toast';
 import { fontSize, palette, radius, spacing } from '../../src/theme';
+import type { BabyProfile } from '../../src/types/models';
 
-const GENDER_LABEL: Record<string, string> = {
-  girl: 'Girl',
-  boy: 'Boy',
-  other: 'Other',
-  unspecified: 'Not specified',
-};
-
-function Row({ label, value }: { label: string; value: string }) {
+function BabyRow({
+  profile,
+  isActive,
+  isLast,
+  onSwitch,
+  onEdit,
+  onDelete,
+}: {
+  profile: BabyProfile;
+  isActive: boolean;
+  isLast: boolean;
+  onSwitch: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const age = calculateAge(profile.dateOfBirth);
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
+    <Pressable
+      onPress={onSwitch}
+      style={[styles.row, !isLast && styles.rowBorder]}
+      accessibilityLabel={isActive ? `${profile.name}, active baby` : `Switch to ${profile.name}`}
+    >
+      {profile.photoUri ? (
+        <Image source={{ uri: profile.photoUri }} style={styles.avatar} />
+      ) : (
+        <View style={styles.avatarPlaceholder}>
+          <Ionicons name="happy" size={22} color={palette.primaryPinkDark} />
+        </View>
+      )}
+      <View style={{ flex: 1 }}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{profile.name}</Text>
+          {isActive && (
+            <View style={styles.activeBadge}>
+              <Ionicons name="checkmark" size={11} color={palette.white} />
+              <Text style={styles.activeBadgeLabel}>Active</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.age}>{age.label}</Text>
+      </View>
+      <Pressable onPress={onEdit} hitSlop={10} style={styles.iconBtn} accessibilityLabel={`Edit ${profile.name}`}>
+        <Ionicons name="pencil" size={16} color={palette.textFaint} />
+      </Pressable>
+      <Pressable onPress={onDelete} hitSlop={10} style={styles.iconBtn} accessibilityLabel={`Delete ${profile.name}`}>
+        <Ionicons name="trash-outline" size={16} color={palette.textFaint} />
+      </Pressable>
+    </Pressable>
   );
 }
 
-export default function ProfileScreen() {
-  const profile = useBabyProfileStore((s) => s.value);
-  const weightUnit = useSettingsStore((s) => s.value.weightUnit);
-  const heightUnit = useSettingsStore((s) => s.value.heightUnit);
+export default function ManageBabiesScreen() {
+  const profiles = useBabyProfilesStore((s) => s.items);
+  const removeProfile = useBabyProfilesStore((s) => s.remove);
+  const activeBabyId = useActiveBabyId();
+  const legacyDefaultBabyId = useLegacyDefaultBabyId();
+  const unmigratedCount = useUnmigratedLegacyRecordCount();
 
-  if (!profile) {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  if (profiles.length === 0) {
     return (
       <Screen>
-        <ModuleHeader illustration="babyProfile" title="Baby Profile" />
-        <Button label="Set up profile" icon="add" onPress={() => router.push('/profile/edit')} />
+        <ModuleHeader illustration="babyProfile" title="Manage Babies" />
+        <EmptyState
+          illustration="babyProfile"
+          title="No babies set up yet"
+          message="Add your baby's profile to start tracking their journey."
+          ctaLabel="Add baby"
+          onPressCta={() => router.push('/profile/edit')}
+        />
       </Screen>
     );
   }
 
-  const age = calculateAge(profile.dateOfBirth);
+  const requestDelete = (id: string) => {
+    if (id === legacyDefaultBabyId && unmigratedCount > 0) {
+      showToast(`Can't delete yet — ${unmigratedCount} existing record${unmigratedCount === 1 ? '' : 's'} still need Phase 3 migration`, 'alert-circle-outline');
+      return;
+    }
+    setDeleteId(id);
+  };
+
+  const deleteTarget = profiles.find((p) => p.id === deleteId);
+
+  const confirmDelete = () => {
+    if (!deleteId) return;
+    removeProfile(deleteId);
+    if (deleteId === activeBabyId) {
+      const remaining = profiles.filter((p) => p.id !== deleteId);
+      setActiveBaby(remaining[0]?.id ?? null);
+    }
+    showToast('Baby profile deleted', 'trash');
+    setDeleteId(null);
+  };
 
   return (
     <Screen>
       <ModuleHeader
         illustration="babyProfile"
-        title={profile.name}
-        subtitle={age.label}
-        rightAction={
-          <Button label="Edit" variant="secondary" size="sm" icon="pencil" onPress={() => router.push('/profile/edit')} />
-        }
+        title="Manage Babies"
+        subtitle={`${profiles.length} ${profiles.length === 1 ? 'baby' : 'babies'}`}
+        rightAction={<Button label="Add" icon="add" size="sm" onPress={() => router.push('/profile/edit?new=1')} />}
       />
 
-      {profile.photoUri && (
-        <View style={styles.photoWrap}>
-          <Image source={{ uri: profile.photoUri }} style={styles.photo} contentFit="cover" />
-        </View>
-      )}
-
-      <Card>
-        <Row label="Date of birth" value={formatDate(profile.dateOfBirth)} />
-        {profile.birthTime && <Row label="Birth time" value={profile.birthTime} />}
-        <Row label="Gender" value={GENDER_LABEL[profile.gender] ?? 'Not specified'} />
-        <Row label="Age" value={`${age.days} days (${age.months} months)`} />
-        {profile.birthWeightKg != null && <Row label="Birth weight" value={formatWeight(profile.birthWeightKg, weightUnit)} />}
-        {profile.birthHeightCm != null && <Row label="Birth height" value={formatHeight(profile.birthHeightCm, heightUnit)} />}
-        {profile.bloodType && <Row label="Blood type" value={profile.bloodType} />}
+      <Card padded={false}>
+        {profiles.map((p, i) => (
+          <BabyRow
+            key={p.id}
+            profile={p}
+            isActive={p.id === activeBabyId}
+            isLast={i === profiles.length - 1}
+            onSwitch={() => {
+              if (p.id !== activeBabyId) {
+                setActiveBaby(p.id);
+                showToast(`Switched to ${p.name}`, 'happy');
+              }
+            }}
+            onEdit={() => router.push(`/profile/edit?id=${p.id}`)}
+            onDelete={() => requestDelete(p.id)}
+          />
+        ))}
       </Card>
 
-      {profile.notes ? (
-        <Card style={{ marginTop: spacing.lg }}>
-          <View style={styles.notesHeader}>
-            <Ionicons name="document-text-outline" size={16} color={palette.textSecondary} />
-            <Text style={styles.notesTitle}>Notes</Text>
-          </View>
-          <Text style={styles.notesBody}>{profile.notes}</Text>
-        </Card>
-      ) : null}
+      <ConfirmDialog
+        visible={!!deleteId}
+        title={`Delete ${deleteTarget?.name ?? 'this baby'}'s profile?`}
+        message="This removes the profile. This can't be undone."
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  photoWrap: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  photo: {
-    width: 140,
-    height: 140,
-    borderRadius: radius.xl,
-  },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  rowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
   },
-  rowLabel: {
-    fontSize: fontSize.md,
-    color: palette.textSecondary,
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
-  rowValue: {
-    fontSize: fontSize.md,
-    color: palette.text,
-    fontWeight: '700',
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: palette.softPink,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  notesHeader: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
-  notesTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    color: palette.textSecondary,
-  },
-  notesBody: {
+  name: {
     fontSize: fontSize.md,
+    fontWeight: '700',
     color: palette.text,
-    lineHeight: 21,
+  },
+  age: {
+    fontSize: fontSize.xs,
+    color: palette.textSecondary,
+    marginTop: 1,
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: palette.primaryPink,
+    borderRadius: radius.pill,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  activeBadgeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: palette.white,
+  },
+  iconBtn: {
+    padding: 4,
   },
 });

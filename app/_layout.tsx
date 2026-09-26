@@ -9,6 +9,7 @@ import { useAppReady } from '../src/hooks/useAppReady';
 import { useSettingsStore } from '../src/store';
 import { ToastHost } from '../src/components/ui/Toast';
 import { seedDefaultMilestones } from '../src/lib/seed';
+import { migrateBabyProfiles } from '../src/lib/babyScope';
 import { configureBackgroundAudio } from '../src/lib/audioMode';
 import { MiniPlayer } from '../src/components/sounds/MiniPlayer';
 import { SoundPlayerSheet } from '../src/components/sounds/SoundPlayerSheet';
@@ -30,6 +31,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (ready) {
+      migrateBabyProfiles();
       seedDefaultMilestones();
       configureBackgroundAudio();
       SplashScreen.hideAsync().catch(() => {});

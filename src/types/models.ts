@@ -22,6 +22,11 @@ export type BreastSide = 'left' | 'right' | 'both';
 
 export interface FeedingRecord {
   id: ID;
+  /** Owning baby's profile id. Optional only for records persisted before
+   * Multiple Baby Profiles existed — see src/lib/babyScope.ts, which
+   * treats a missing babyId as belonging to the legacy default baby
+   * rather than requiring a destructive bulk migration. */
+  babyId?: string;
   type: FeedingType;
   startTime: string; // ISO datetime
   // breast; also reused by pump (side, durationMin)
@@ -46,6 +51,8 @@ export type DiaperType = 'wet' | 'dirty' | 'both';
 
 export interface DiaperRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   type: DiaperType;
   time: string; // ISO datetime
   notes?: string;
@@ -57,6 +64,8 @@ export type SleepKind = 'nap' | 'night';
 
 export interface SleepRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   kind: SleepKind;
   startTime: string; // ISO
   endTime?: string; // ISO, undefined = in progress
@@ -69,6 +78,8 @@ export type GrowthMetric = 'weight' | 'height' | 'headCircumference';
 
 export interface GrowthRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   date: string; // ISO date
   weightKg?: number;
   heightCm?: number;
@@ -89,6 +100,8 @@ export type MilestoneCategory =
 
 export interface Milestone {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   title: string;
   category: MilestoneCategory;
   completed: boolean;
@@ -102,6 +115,8 @@ export interface Milestone {
 
 export interface Vaccination {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   vaccineName: string;
   date: string; // ISO date
   doseNotes?: string;
@@ -117,6 +132,8 @@ export type HealthRecordType = 'doctorVisit' | 'symptom' | 'temperature' | 'medi
 
 export interface HealthRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   type: HealthRecordType;
   date: string; // ISO datetime
   title: string;
@@ -128,6 +145,8 @@ export interface HealthRecord {
 
 export interface Appointment {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   title: string;
   doctorOrClinic?: string;
   date: string; // ISO date
@@ -153,6 +172,8 @@ export type ReminderRepeat = 'none' | 'daily' | 'weekly';
 
 export interface Reminder {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   title: string;
   category: ReminderCategory;
   dateTime: string; // ISO datetime
@@ -167,6 +188,8 @@ export type BabyCareActivity = 'bath' | 'nails' | 'hair' | 'oral' | 'skin' | 'ot
 
 export interface BabyCareRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   activity: BabyCareActivity;
   customLabel?: string;
   dateTime: string; // ISO datetime
@@ -187,6 +210,8 @@ export type ActivityKind =
 
 export interface ActivityRecord {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   kind: ActivityKind;
   customLabel?: string;
   dateTime: string; // ISO datetime
@@ -201,6 +226,8 @@ export type JournalCategory = 'everyday' | 'milestone' | 'first' | 'health' | 'f
 
 export interface Memory {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   title: string;
   date: string; // ISO date
   caption?: string;
@@ -237,6 +264,8 @@ export type NoteCategory = 'general' | 'feeding' | 'sleep' | 'other' | JournalCa
 
 export interface JournalNote {
   id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   title: string;
   body: string;
   date: string; // ISO date
@@ -268,7 +297,12 @@ export type TeethingSymptom =
  * slot with no record renders as its default `notErupted` state, so a
  * baby with no teeth yet never writes 20 near-empty rows. */
 export interface ToothRecord {
-  id: ID; // matches a TOOTH_CHART slot id, e.g. "upperLeft-centralIncisor"
+  // Composite once a babyId is stamped (`${babyId}-${slotId}`) so two
+  // babies' entries for the same tooth slot never collide on `id` — see
+  // src/lib/babyScope.ts. Bare slot id only for pre-migration legacy rows.
+  id: ID;
+  /** See FeedingRecord.babyId. */
+  babyId?: string;
   position: ToothPosition;
   type: ToothType;
   status: ToothStatus;
