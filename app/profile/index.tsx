@@ -143,7 +143,7 @@ export default function ManageBabiesScreen() {
       <ConfirmDialog
         visible={!!deleteId}
         title={`Delete ${deleteTarget?.name ?? 'this baby'}'s profile?`}
-        message="This removes the profile. This can't be undone."
+        message="This removes the baby from the app. Their existing tracking history will no longer be accessible through this profile. This can't be undone."
         onCancel={() => setDeleteId(null)}
         onConfirm={confirmDelete}
       />
