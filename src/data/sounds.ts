@@ -34,7 +34,7 @@ export const soundAssetSources: Record<SoundAssetKey, ReturnType<typeof require>
   softPad: require('../../assets/sounds/soft-pad.wav'),
 };
 
-export type SoundCategory = 'babyMusic' | 'sleepSounds';
+export type SoundCategory = 'babyMusic' | 'sleepSounds' | 'islamicNasheeds';
 
 export interface Sound {
   id: string;
@@ -44,11 +44,13 @@ export interface Sound {
   assetKey: SoundAssetKey;
   /** Whether this sound can be combined with others in Mix Sounds. */
   mixable: boolean;
-  /** Groups the sound under "Baby Music" or "Sleep Sounds" on the Sounds
-   * screen. Reflects what each sound actually is today (e.g. the one
-   * melodic track is babyMusic, everything else is an ambient/soothing
-   * sleepSounds texture) — it does not imply any sound is a real licensed
-   * recording. */
+  /** Groups the sound under "Baby Music", "Sleep Sounds", or "Islamic
+   * Nasheeds" on the Sounds screen. Reflects what each sound actually is
+   * today (e.g. the one melodic track is babyMusic, everything else is an
+   * ambient/soothing sleepSounds texture) — it does not imply any sound is
+   * a real licensed recording. No sound currently uses islamicNasheeds:
+   * no properly licensed recording has been verified yet, so the category
+   * exists with an honest empty state rather than any placeholder track. */
   category: SoundCategory;
 }
 

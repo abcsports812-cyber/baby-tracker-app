@@ -1,9 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
 import { Button } from '../../src/components/ui/Button';
+import { EmptyState } from '../../src/components/ui/EmptyState';
 import { SoundCard } from '../../src/components/sounds/SoundCard';
 import { SoundChip } from '../../src/components/sounds/SoundChip';
 import { FEATURED_SOUND_IDS, SOUNDS, getSoundById } from '../../src/data/sounds';
@@ -27,6 +29,7 @@ export default function SoundsScreen() {
   const allIds = useMemo(() => SOUNDS.map((s) => s.id), []);
   const babyMusicSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'babyMusic'), []);
   const sleepSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'sleepSounds'), []);
+  const islamicNasheedSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'islamicNasheeds'), []);
   const favoriteSounds = useMemo(() => favorites.map((id) => getSoundById(id)).filter(Boolean) as typeof SOUNDS, [favorites]);
   const recentSounds = useMemo(
     () => recent.map((e) => getSoundById(e.soundId)).filter(Boolean) as typeof SOUNDS,
@@ -160,6 +163,33 @@ export default function SoundsScreen() {
         ))}
       </View>
 
+      <View style={[styles.sectionHeaderRow, styles.sectionTitleRow]}>
+        <Ionicons name="moon-outline" size={18} color={palette.text} style={styles.sectionTitleIcon} />
+        <Text style={styles.sectionTitle}>Islamic Nasheeds</Text>
+      </View>
+      {islamicNasheedSounds.length === 0 ? (
+        <EmptyState
+          illustration="sounds"
+          title="No nasheeds yet"
+          message="We're still verifying properly licensed recordings suitable for babies before adding any — nothing here is a placeholder."
+        />
+      ) : (
+        <View style={styles.grid}>
+          {islamicNasheedSounds.map((sound) => (
+            <SoundCard
+              key={sound.id}
+              sound={sound}
+              isActive={activeSoundIds.includes(sound.id)}
+              isPlaying={isPlaying}
+              isFavorite={isFavorite(sound.id)}
+              onPress={() => handleCardPress(sound.id)}
+              onTogglePlay={() => handleCardTogglePlay(sound.id)}
+              onToggleFavorite={() => toggleFavorite(sound.id)}
+            />
+          ))}
+        </View>
+      )}
+
       <View style={[styles.mixBanner, { backgroundColor: categoryColors.sound.bg }]}>
         <Text style={styles.mixBannerTitle}>Mix Sounds</Text>
         <Text style={styles.mixBannerBody}>Combine ambient sounds like Rain + Shushing or Heartbeat + Womb, and save your favorite blend.</Text>
@@ -173,6 +203,13 @@ const styles = StyleSheet.create({
   sectionHeaderRow: {
     marginBottom: spacing.md,
     marginTop: spacing.sm,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitleIcon: {
+    marginRight: spacing.xs,
   },
   sectionTitle: {
     fontSize: fontSize.lg,
