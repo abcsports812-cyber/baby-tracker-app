@@ -34,6 +34,8 @@ export const soundAssetSources: Record<SoundAssetKey, ReturnType<typeof require>
   softPad: require('../../assets/sounds/soft-pad.wav'),
 };
 
+export type SoundCategory = 'babyMusic' | 'sleepSounds';
+
 export interface Sound {
   id: string;
   name: string;
@@ -42,6 +44,12 @@ export interface Sound {
   assetKey: SoundAssetKey;
   /** Whether this sound can be combined with others in Mix Sounds. */
   mixable: boolean;
+  /** Groups the sound under "Baby Music" or "Sleep Sounds" on the Sounds
+   * screen. Reflects what each sound actually is today (e.g. the one
+   * melodic track is babyMusic, everything else is an ambient/soothing
+   * sleepSounds texture) — it does not imply any sound is a real licensed
+   * recording. */
+  category: SoundCategory;
 }
 
 export const SOUNDS: Sound[] = [
@@ -52,6 +60,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'whiteNoise',
     assetKey: 'whiteNoise',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'gentle-rain',
@@ -60,6 +69,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'rain',
     assetKey: 'rain',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'womb',
@@ -68,6 +78,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'womb',
     assetKey: 'womb',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'lullaby',
@@ -76,6 +87,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'lullaby',
     assetKey: 'lullaby',
     mixable: false,
+    category: 'babyMusic',
   },
   {
     id: 'heartbeat',
@@ -84,6 +96,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'heartbeat',
     assetKey: 'heartbeat',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'shushing',
@@ -92,6 +105,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'shushing',
     assetKey: 'shushing',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'fan',
@@ -100,6 +114,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'fan',
     assetKey: 'fan',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'hair-dryer',
@@ -108,6 +123,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'hairDryer',
     assetKey: 'fan',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'ocean',
@@ -116,6 +132,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'ocean',
     assetKey: 'ocean',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'nature',
@@ -124,6 +141,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'nature',
     assetKey: 'nature',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'gentle-ambient',
@@ -132,6 +150,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'ambient',
     assetKey: 'ambient',
     mixable: true,
+    category: 'sleepSounds',
   },
   {
     id: 'calm-sleep',
@@ -140,6 +159,7 @@ export const SOUNDS: Sound[] = [
     illustration: 'calmSleep',
     assetKey: 'softPad',
     mixable: true,
+    category: 'sleepSounds',
   },
 ];
 

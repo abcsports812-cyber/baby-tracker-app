@@ -25,6 +25,8 @@ export default function SoundsScreen() {
 
   const featured = useMemo(() => FEATURED_SOUND_IDS.map((id) => getSoundById(id)!).filter(Boolean), []);
   const allIds = useMemo(() => SOUNDS.map((s) => s.id), []);
+  const babyMusicSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'babyMusic'), []);
+  const sleepSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'sleepSounds'), []);
   const favoriteSounds = useMemo(() => favorites.map((id) => getSoundById(id)).filter(Boolean) as typeof SOUNDS, [favorites]);
   const recentSounds = useMemo(
     () => recent.map((e) => getSoundById(e.soundId)).filter(Boolean) as typeof SOUNDS,
@@ -123,10 +125,28 @@ export default function SoundsScreen() {
       </View>
 
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>All Sounds</Text>
+        <Text style={styles.sectionTitle}>Baby Music</Text>
       </View>
       <View style={styles.grid}>
-        {SOUNDS.map((sound) => (
+        {babyMusicSounds.map((sound) => (
+          <SoundCard
+            key={sound.id}
+            sound={sound}
+            isActive={activeSoundIds.includes(sound.id)}
+            isPlaying={isPlaying}
+            isFavorite={isFavorite(sound.id)}
+            onPress={() => handleCardPress(sound.id)}
+            onTogglePlay={() => handleCardTogglePlay(sound.id)}
+            onToggleFavorite={() => toggleFavorite(sound.id)}
+          />
+        ))}
+      </View>
+
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Sleep Sounds</Text>
+      </View>
+      <View style={styles.grid}>
+        {sleepSounds.map((sound) => (
           <SoundCard
             key={sound.id}
             sound={sound}
