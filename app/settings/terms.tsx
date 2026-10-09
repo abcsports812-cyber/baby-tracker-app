@@ -10,10 +10,10 @@ export default function TermsScreen() {
       <ModuleHeader illustration="settings" title="Terms of Use" />
       <Card>
         <Text style={styles.body}>
-          Baby Tracker is provided for personal, non-commercial record keeping of your own baby’s care and development.{'\n\n'}
+          Zoni Baby is provided for personal, non-commercial record keeping of your own baby’s care and development.{'\n\n'}
           The app is offered “as is” without warranty of any kind. Information you enter — including feeding, sleep, growth,
           health and appointment records — is your responsibility to keep accurate and up to date.{'\n\n'}
-          Baby Tracker does not provide medical advice, diagnosis or treatment. Always consult a qualified healthcare
+          Zoni Baby does not provide medical advice, diagnosis or treatment. Always consult a qualified healthcare
           professional for questions about your baby’s health.{'\n\n'}
           By using this app, you agree to use it responsibly and understand that all data is stored locally on your device.
         </Text>

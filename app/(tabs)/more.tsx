@@ -29,7 +29,7 @@ export default function MoreScreen() {
         <IllustrationBadge name="settings" size={56} />
         <View style={{ flex: 1, marginLeft: spacing.md }}>
           <Text style={styles.title}>More</Text>
-          <Text style={styles.subtitle}>{profile?.name ?? 'Your baby'}’s Baby Tracker</Text>
+          <Text style={styles.subtitle}>{profile?.name ?? 'Your baby'}’s profile</Text>
         </View>
       </View>
 

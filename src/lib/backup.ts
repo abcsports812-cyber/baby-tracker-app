@@ -132,28 +132,28 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  * foreign, or version-incompatible file, which is this function's job. */
 export function validateBackup(raw: unknown): BackupValidationResult {
   if (!isPlainObject(raw)) {
-    return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
+    return { valid: false, error: "This file isn't a valid Zoni Baby backup." };
   }
 
   const { formatVersion, appVersion, exportedAt, data } = raw as Record<string, unknown>;
 
   if (typeof formatVersion !== 'number' || !Number.isInteger(formatVersion) || formatVersion < 1) {
-    return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
+    return { valid: false, error: "This file isn't a valid Zoni Baby backup." };
   }
   if (formatVersion > BACKUP_FORMAT_VERSION) {
-    return { valid: false, error: 'This backup was created by a newer version of Baby Tracker.' };
+    return { valid: false, error: 'This backup was created by a newer version of Zoni Baby.' };
   }
 
   if (typeof appVersion !== 'string' || !appVersion) {
-    return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
+    return { valid: false, error: "This file isn't a valid Zoni Baby backup." };
   }
 
   if (typeof exportedAt !== 'string' || Number.isNaN(new Date(exportedAt).getTime())) {
-    return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
+    return { valid: false, error: "This file isn't a valid Zoni Baby backup." };
   }
 
   if (!isPlainObject(data)) {
-    return { valid: false, error: "This file isn't a valid Baby Tracker backup." };
+    return { valid: false, error: "This file isn't a valid Zoni Baby backup." };
   }
 
   const { babyProfile, babyProfiles, activeBabyId, legacyDefaultBabyId, settings, stores } = data as Record<string, unknown>;

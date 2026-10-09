@@ -72,7 +72,7 @@ export default function OnboardingScreen() {
         {step === 0 && (
           <Animated.View entering={FadeIn} style={styles.centerContent}>
             <IllustrationBadge name="home" size={160} />
-            <Text style={styles.title}>Welcome to Baby Tracker</Text>
+            <Text style={styles.title}>Welcome to Zoni Baby</Text>
             <Text style={styles.subtitle}>Your little one’s journey, beautifully organized.</Text>
           </Animated.View>
         )}
