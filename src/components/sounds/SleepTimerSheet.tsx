@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryColors, fontSize, palette, radius, shadow, spacing } from '../../theme';
 import type { SleepTimerMinutes } from '../../store/soundPlayer';
 
@@ -25,12 +26,15 @@ interface Props {
 
 export function SleepTimerSheet({ visible, activeMinutes, hasActiveTimer, onSelect, onCancelTimer, onClose }: Props) {
   const colors = categoryColors.sound;
+  // Same Android system-nav-bar reservation as FormSheet -- this Modal
+  // also renders edge-to-edge outside any parent SafeAreaView.
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={[styles.sheet, shadow.card]}>
+        <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.xxl + insets.bottom }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>Sleep Timer</Text>

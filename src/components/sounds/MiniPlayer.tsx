@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoundById } from '../../data/sounds';
 import { useSoundPlayerStore } from '../../store/soundPlayer';
 import { categoryColors, fontSize, palette, radius, shadow, spacing } from '../../theme';
@@ -27,13 +28,20 @@ export function MiniPlayer({ onPress }: Props) {
   const togglePlayPause = useSoundPlayerStore((s) => s.togglePlayPause);
   const stop = useSoundPlayerStore((s) => s.stop);
   const pathname = usePathname();
+  // This bar is rendered at the root layout, outside the tab navigator,
+  // as a plain `position: 'absolute'` view -- it gets none of the tab
+  // bar's own safe-area handling (see app/(tabs)/_layout.tsx) and must
+  // add the Android system nav bar / gesture inset itself, both to clear
+  // the tab bar (now `64 + insets.bottom` tall) on tab-root screens and
+  // to clear the system nav bar directly on non-tab screens.
+  const insets = useSafeAreaInsets();
 
   // Hidden on the Sounds screens themselves — full playback controls are
   // already front and center there, so a floating bar would be redundant.
   if (pathname?.startsWith('/sounds')) return null;
   if (activeSoundIds.length === 0) return null;
 
-  const bottomOffset = TAB_ROOT_PATHS.has(pathname ?? '/') ? 76 : 20;
+  const bottomOffset = (TAB_ROOT_PATHS.has(pathname ?? '/') ? 76 : 20) + insets.bottom;
 
   const primarySound = getSoundById(activeSoundIds[0]);
   if (!primarySound) return null;

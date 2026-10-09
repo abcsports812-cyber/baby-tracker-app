@@ -27,6 +27,13 @@ export interface TimelineEvent {
   title: string;
   subtitle?: string;
   time: string; // ISO
+  /** Where tapping this event in Home's timeline should navigate. Points
+   * either at a per-id detail screen (journal entries) or at the
+   * record's own tracker screen with `?openId=<id>`, which that screen's
+   * useAutoOpenEdit hook picks up to open the matching record's existing
+   * edit sheet -- never a generic shared screen, and never a different
+   * record than the one actually tapped. */
+  href: string;
 }
 
 export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): TimelineEvent[] {
@@ -74,7 +81,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title = f.foodName || 'Solid food';
         subtitle = f.amount;
       }
-      events.push({ id: f.id, category: 'feeding', icon, title, subtitle, time: f.startTime });
+      events.push({ id: f.id, category: 'feeding', icon, title, subtitle, time: f.startTime, href: f.type === 'pump' ? `/pumping?openId=${f.id}` : `/feeding?openId=${f.id}` });
     });
 
     diaper.filter((d) => isSameDay(d.time, date)).forEach((d) => {
@@ -85,6 +92,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: d.type === 'both' ? 'Wet & dirty diaper' : d.type === 'wet' ? 'Wet diaper' : 'Dirty diaper',
         subtitle: d.notes,
         time: d.time,
+        href: `/diaper?openId=${d.id}`,
       });
     });
 
@@ -99,11 +107,12 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: s.kind === 'nap' ? 'Nap' : 'Night sleep',
         subtitle: durationMin ? formatDuration(durationMin) : 'In progress',
         time: s.startTime,
+        href: `/sleep?openId=${s.id}`,
       });
     });
 
     health.filter((h) => isSameDay(h.date, date)).forEach((h) => {
-      events.push({ id: h.id, category: 'health', icon: 'medkit', title: h.title, subtitle: h.notes, time: h.date });
+      events.push({ id: h.id, category: 'health', icon: 'medkit', title: h.title, subtitle: h.notes, time: h.date, href: `/health?openId=${h.id}` });
     });
 
     vaccinations.filter((v) => isSameDay(v.date, date)).forEach((v) => {
@@ -114,6 +123,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: `${v.vaccineName} vaccine`,
         subtitle: v.doseNotes,
         time: v.date,
+        href: `/health?openId=${v.id}`,
       });
     });
 
@@ -125,11 +135,12 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: a.title,
         subtitle: a.doctorOrClinic,
         time: a.time ? `${a.date}T${a.time}` : a.date,
+        href: `/appointments?openId=${a.id}`,
       });
     });
 
     milestones.filter((m) => m.completed && m.dateAchieved && isSameDay(m.dateAchieved, date)).forEach((m) => {
-      events.push({ id: m.id, category: 'milestone', icon: 'star', title: m.title, subtitle: 'Milestone achieved', time: m.dateAchieved! });
+      events.push({ id: m.id, category: 'milestone', icon: 'star', title: m.title, subtitle: 'Milestone achieved', time: m.dateAchieved!, href: `/milestones?openId=${m.id}` });
     });
 
     babyCare.filter((b) => isSameDay(b.dateTime, date)).forEach((b) => {
@@ -140,6 +151,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: babyCareLabel(b.activity, b.customLabel),
         subtitle: b.notes,
         time: b.dateTime,
+        href: `/babycare?openId=${b.id}`,
       });
     });
 
@@ -151,26 +163,29 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
         title: activityLabel(a.kind, a.customLabel),
         subtitle: a.durationMin ? formatDuration(a.durationMin) : a.notes,
         time: a.dateTime,
+        href: `/activities?openId=${a.id}`,
       });
     });
 
     memories.filter((m) => isSameDay(m.date, date)).forEach((m) => {
-      events.push({ id: m.id, category: 'memory', icon: 'images', title: m.title, subtitle: m.caption, time: m.date });
+      events.push({ id: m.id, category: 'memory', icon: 'images', title: m.title, subtitle: m.caption, time: m.date, href: `/journal/memory/${m.id}` });
     });
 
     notes.filter((n) => isSameDay(n.date, date)).forEach((n) => {
-      events.push({ id: n.id, category: 'note', icon: 'document-text', title: n.title, subtitle: n.body, time: n.date });
+      events.push({ id: n.id, category: 'note', icon: 'document-text', title: n.title, subtitle: n.body, time: n.date, href: `/journal/note/${n.id}` });
     });
 
     teeth.forEach((t) => {
       if (t.eruptionDate && isSameDay(t.eruptionDate, date)) {
+        const isEmerging = t.status === 'emerging';
         events.push({
           id: `${t.id}-erupted`,
           category: 'teeth',
           icon: 'happy-outline',
-          title: `${toothSlotLabel(t)} erupted`,
-          subtitle: t.status === 'emerging' ? 'Emerging' : 'Erupted',
+          title: `${toothSlotLabel(t)} ${isEmerging ? 'is emerging' : 'erupted'}`,
+          subtitle: isEmerging ? 'Emerging' : 'Erupted',
           time: t.eruptionDate,
+          href: `/teeth?openId=${t.id}`,
         });
       }
       if (t.lossDate && isSameDay(t.lossDate, date)) {
@@ -181,6 +196,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
           title: `${toothSlotLabel(t)} lost`,
           subtitle: 'Tooth lost',
           time: t.lossDate,
+          href: `/teeth?openId=${t.id}`,
         });
       }
     });

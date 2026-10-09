@@ -11,14 +11,19 @@ interface Props {
   time?: string;
   onPress?: () => void;
   onDelete?: () => void;
+  accessibilityLabel?: string;
 }
 
-export function RecordRow({ category, icon, title, subtitle, time, onPress, onDelete }: Props) {
+export function RecordRow({ category, icon, title, subtitle, time, onPress, onDelete, accessibilityLabel }: Props) {
   const colors = categoryColors[category];
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? accessibilityLabel ?? title : undefined}
+      hitSlop={onPress ? { top: 4, bottom: 4 } : undefined}
       style={({ pressed }) => [styles.row, pressed && onPress && { opacity: 0.85 }]}
     >
       <View style={[styles.iconWrap, { backgroundColor: colors.bg }]}>
@@ -36,7 +41,7 @@ export function RecordRow({ category, icon, title, subtitle, time, onPress, onDe
       </View>
       {time && <Text style={styles.time}>{time}</Text>}
       {onDelete && (
-        <Pressable onPress={onDelete} hitSlop={10} style={styles.deleteBtn}>
+        <Pressable onPress={onDelete} hitSlop={10} style={styles.deleteBtn} accessibilityLabel={`Delete ${title}`} accessibilityRole="button">
           <Ionicons name="trash-outline" size={16} color={palette.textFaint} />
         </Pressable>
       )}

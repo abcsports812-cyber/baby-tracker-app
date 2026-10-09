@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fontSize, palette, radius, shadow, spacing } from '../../theme';
 import { Button } from './Button';
 
@@ -23,6 +24,14 @@ interface Props {
 }
 
 export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save', saveDisabled, children }: Props) {
+  // react-native's Modal renders edge-to-edge, outside any parent
+  // SafeAreaView's view-tree adjustment, so the sheet's own bottom padding
+  // never otherwise accounts for the Android system nav bar / gesture
+  // area -- its Save button can end up sitting under it. Only Android
+  // needs the extra reservation added here; iOS already gets safe
+  // bottom spacing from the existing `spacing.xl` constant.
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -31,7 +40,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetWrap}
         >
-          <View style={[styles.sheet, shadow.card]}>
+          <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.lg + insets.bottom }]}>
             <View style={styles.handle} />
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>

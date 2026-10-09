@@ -15,6 +15,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useHealthRecordStore, useVaccinationStore } from '../../src/store';
 import { stampActiveBaby, useBabyScoped, withBabyPrefix } from '../../src/lib/babyScope';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { generateId, nowIso } from '../../src/lib/id';
 import { daysBetween, formatDate, formatDateTime } from '../../src/lib/date';
 import { healthRecordTypeLabel } from '../../src/lib/labels';
@@ -186,6 +187,8 @@ export default function HealthScreen() {
     setVaxSheet(true);
   };
 
+  useAutoOpenEdit(vaccinations, openEditVax);
+
   const saveVax = async () => {
     const now = nowIso();
     const existing = vaxEditId ? vaccinations.find((v) => v.id === vaxEditId) : undefined;
@@ -249,6 +252,8 @@ export default function HealthScreen() {
     setRecordNotes(r.notes ?? '');
     setRecordSheet(true);
   };
+
+  useAutoOpenEdit(records, openEditRecord);
 
   const saveRecord = () => {
     const now = nowIso();

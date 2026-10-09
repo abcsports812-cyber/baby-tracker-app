@@ -149,6 +149,11 @@ export default function HomeScreen() {
               title={event.title}
               subtitle={event.subtitle}
               time={eventTimeLabel(event)}
+              // event.href is built in src/lib/timeline.ts from each record's
+              // own route + id, across 13 different route shapes -- typed
+              // routes can't express that union, so it's a plain string here.
+              onPress={() => router.push(event.href as never)}
+              accessibilityLabel={`${event.title}${event.subtitle ? `, ${event.subtitle}` : ''}, ${eventTimeLabel(event)}`}
             />
           ))}
         </View>

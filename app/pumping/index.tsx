@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { BarChart } from '../../src/components/charts/BarChart';
 import { useFeedingStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate, formatDuration, formatTime, isSameDay, last7Days, toISODate } from '../../src/lib/date';
@@ -145,6 +146,8 @@ export default function PumpingScreen() {
     setNotes(item.notes ?? '');
     setSheetOpen(true);
   };
+
+  useAutoOpenEdit(pumpItems, openEdit);
 
   const startPumping = () => {
     if (active) return;

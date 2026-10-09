@@ -24,6 +24,8 @@ import {
   useLegacyDefaultBabyId,
 } from '../../src/lib/babyScope';
 import { nowIso } from '../../src/lib/id';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
+import { toISODate } from '../../src/lib/date';
 import { TOOTH_CHART, toothSlotLabel } from '../../src/lib/teeth';
 import { teethingSymptomLabel, toothStatusLabel } from '../../src/lib/labels';
 import { showToast } from '../../src/components/ui/Toast';
@@ -93,6 +95,11 @@ export default function TeethScreen() {
     setRelatedMilestoneId(record?.relatedMilestoneId ?? NO_MILESTONE);
   };
 
+  // Home's tappable timeline links here with the tooth record's own id
+  // (not a slot id) — resolve it back to its slot (position/type) the
+  // same way everything else in this screen does, then open normally.
+  useAutoOpenEdit(items, (record) => openEdit(`${record.position}-${record.type}`));
+
   const toggleSymptom = (symptom: TeethingSymptom) => {
     setSymptoms((prev) => (prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]));
   };
@@ -121,8 +128,8 @@ export default function TeethScreen() {
       position: editingSlot.position,
       type: editingSlot.type,
       status,
-      eruptionDate: status === 'emerging' || status === 'erupted' ? (eruptionDate ?? new Date()).toISOString().slice(0, 10) : undefined,
-      lossDate: status === 'lost' ? (lossDate ?? new Date()).toISOString().slice(0, 10) : undefined,
+      eruptionDate: status === 'emerging' || status === 'erupted' ? toISODate(eruptionDate ?? new Date()) : undefined,
+      lossDate: status === 'lost' ? toISODate(lossDate ?? new Date()) : undefined,
       symptoms: symptoms.length > 0 ? symptoms : undefined,
       notes: notes.trim() || undefined,
       photoUri,

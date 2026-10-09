@@ -13,6 +13,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useActivityStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime, formatDuration } from '../../src/lib/date';
@@ -69,6 +70,8 @@ export default function ActivitiesScreen() {
     setNotes(item.notes ?? '');
     setSheetOpen(true);
   };
+
+  useAutoOpenEdit(items, openEdit);
 
   const save = () => {
     const now = nowIso();

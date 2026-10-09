@@ -1,7 +1,23 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 export function toDate(value: string | Date): Date {
-  return typeof value === 'string' ? new Date(value) : value;
+  if (typeof value !== 'string') return value;
+  // A bare "YYYY-MM-DD" string is parsed by the native Date constructor as
+  // UTC midnight, not local midnight. Every local-time getter used by
+  // isSameDay/startOfDay/etc. then reads that instant back as the
+  // previous calendar day for any timezone behind UTC — e.g. a tooth
+  // record's eruptionDate saved as "today" (via toISOString().slice(0,10))
+  // fails isSameDay(eruptionDate, new Date()) and disappears from Today's
+  // Timeline for anyone west of UTC. Parse date-only strings as local
+  // midnight instead; full ISO datetimes (which already carry a time
+  // component, e.g. feeding.startTime) are left to the native parser.
+  if (DATE_ONLY_PATTERN.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date(value);
 }
 
 export function startOfDay(value: string | Date): Date {

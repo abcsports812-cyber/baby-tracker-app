@@ -13,6 +13,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useAppointmentStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped, withBabyPrefix } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDateTime } from '../../src/lib/date';
@@ -65,6 +66,8 @@ export default function AppointmentsScreen() {
     setReminderEnabled(a.reminderEnabled);
     setSheetOpen(true);
   };
+
+  useAutoOpenEdit(items, openEdit);
 
   const save = async () => {
     const now = nowIso();

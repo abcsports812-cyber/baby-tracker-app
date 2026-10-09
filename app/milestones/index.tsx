@@ -15,6 +15,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { useMilestoneStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { formatDate } from '../../src/lib/date';
@@ -78,6 +79,8 @@ export default function MilestonesScreen() {
     setPhotoUri(m.photoUri);
     setSheetOpen(true);
   };
+
+  useAutoOpenEdit(items, openEdit);
 
   const pickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
