@@ -209,13 +209,13 @@ export default function DataSettingsScreen() {
       try {
         parsed = JSON.parse(picked.content);
       } catch {
-        showToast("This file isn't a valid Zoni Baby backup.", 'alert-circle-outline');
+        showToast("This file isn't a valid Zoni Baby Tracker backup.", 'alert-circle-outline');
         return;
       }
 
       const validation = validateBackup(parsed);
       if (!validation.valid || !validation.backup) {
-        showToast(validation.error ?? "This file isn't a valid Zoni Baby backup.", 'alert-circle-outline');
+        showToast(validation.error ?? "This file isn't a valid Zoni Baby Tracker backup.", 'alert-circle-outline');
         return;
       }
 
@@ -267,7 +267,7 @@ export default function DataSettingsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>Import / Restore</Text>
-            <Text style={styles.cardBody}>Restore your Zoni Baby data from a previous backup file.</Text>
+            <Text style={styles.cardBody}>Restore your Zoni Baby Tracker data from a previous backup file.</Text>
           </View>
         </View>
         <Button label="Import" icon="folder-open-outline" variant="secondary" onPress={handleImport} loading={importing} style={{ marginTop: spacing.md }} />

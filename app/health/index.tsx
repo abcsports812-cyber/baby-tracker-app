@@ -281,7 +281,7 @@ export default function HealthScreen() {
       <View style={styles.disclaimer}>
         <Ionicons name="information-circle" size={16} color={palette.primaryPinkDark} />
         <Text style={styles.disclaimerText}>
-          Zoni Baby is for personal record keeping and does not replace professional medical advice.
+          Zoni Baby Tracker is for personal record keeping and does not replace professional medical advice.
         </Text>
       </View>
 

@@ -29,7 +29,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
       <SafeAreaView style={styles.errorScreen}>
         <Text style={styles.errorTitle}>Something went wrong</Text>
         <Text style={styles.errorMessage}>
-          Zoni Baby ran into an unexpected problem. Your data is safe on this device — try again below.
+          Zoni Baby Tracker ran into an unexpected problem. Your data is safe on this device — try again below.
         </Text>
         {__DEV__ && (
           <Text style={styles.errorDetail} numberOfLines={4}>

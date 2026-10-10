@@ -12,13 +12,13 @@ export default function AboutScreen() {
 
       <View style={styles.brand}>
         <IllustrationBadge name="home" size={72} />
-        <Text style={styles.appName}>Zoni Baby</Text>
+        <Text style={styles.appName}>Zoni Baby Tracker</Text>
         <Text style={styles.version}>Version 1.0.0</Text>
       </View>
 
       <Card>
         <Text style={styles.body}>
-          Zoni Baby is a calm, beautifully organized place to log feeding, sleep, diapers, growth, milestones, health and
+          Zoni Baby Tracker is a calm, beautifully organized place to log feeding, sleep, diapers, growth, milestones, health and
           the everyday moments of your baby’s first years. Everything you record stays private on your device.
         </Text>
       </Card>

@@ -45,7 +45,7 @@ async function exportNative(json: string): Promise<ExportResult> {
 
   await Sharing.shareAsync(file.uri, {
     mimeType: 'application/json',
-    dialogTitle: 'Export Zoni Baby Backup',
+    dialogTitle: 'Export Zoni Baby Tracker Backup',
     UTI: 'public.json',
   });
 

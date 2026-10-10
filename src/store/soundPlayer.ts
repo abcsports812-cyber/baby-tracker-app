@@ -102,7 +102,7 @@ export const useSoundPlayerStore = create<SoundPlayerState>((set, get) => ({
     const player = ensurePlayer(sound, volume);
     player.play();
     try {
-      player.setActiveForLockScreen(true, { title: sound.name, artist: 'Zoni Baby Sounds' });
+      player.setActiveForLockScreen(true, { title: sound.name, artist: 'Zoni Baby Tracker Sounds' });
     } catch {
       // lock screen integration is best-effort and platform-dependent
     }
@@ -180,7 +180,7 @@ export const useSoundPlayerStore = create<SoundPlayerState>((set, get) => ({
       });
     } else {
       try {
-        player.setActiveForLockScreen(true, { title: sound.name, artist: 'Zoni Baby Sounds' });
+        player.setActiveForLockScreen(true, { title: sound.name, artist: 'Zoni Baby Tracker Sounds' });
       } catch {
         // ignore
       }
