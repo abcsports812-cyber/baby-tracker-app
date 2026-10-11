@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,9 +6,7 @@ import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
 import { Button } from '../../src/components/ui/Button';
 import { SoundCard } from '../../src/components/sounds/SoundCard';
 import { SoundChip } from '../../src/components/sounds/SoundChip';
-import { ZikrCard } from '../../src/components/sounds/ZikrCard';
 import { FEATURED_SOUND_IDS, SOUNDS, getSoundById } from '../../src/data/sounds';
-import { KIDS_ZIKR_PHRASES } from '../../src/data/zikr';
 import { useFavoriteSoundsStore, useRecentSoundsStore } from '../../src/store';
 import { useSoundPlayerStore, useSoundSheetStore } from '../../src/store/soundPlayer';
 import { categoryColors, fontSize, palette, radius, spacing } from '../../src/theme';
@@ -163,19 +160,6 @@ export default function SoundsScreen() {
         ))}
       </View>
 
-      <View style={[styles.sectionHeaderRow, styles.sectionTitleRow]}>
-        <Ionicons name="sparkles-outline" size={18} color={palette.text} style={styles.sectionTitleIcon} />
-        <Text style={styles.sectionTitle}>Kids’ Zikr</Text>
-      </View>
-      <Text style={styles.sectionSubtitle}>
-        Simple words of remembrance for little ones to learn together. Narrated audio is coming soon — for now, read and say them together.
-      </Text>
-      <View style={styles.zikrList}>
-        {KIDS_ZIKR_PHRASES.map((phrase) => (
-          <ZikrCard key={phrase.id} phrase={phrase} />
-        ))}
-      </View>
-
       <View style={[styles.mixBanner, { backgroundColor: categoryColors.sound.bg }]}>
         <Text style={styles.mixBannerTitle}>Mix Sounds</Text>
         <Text style={styles.mixBannerBody}>Combine ambient sounds like Rain + Shushing or Heartbeat + Womb, and save your favorite blend.</Text>
@@ -190,13 +174,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     marginTop: spacing.sm,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitleIcon: {
-    marginRight: spacing.xs,
-  },
   sectionTitle: {
     fontSize: fontSize.lg,
     fontWeight: '800',
@@ -205,15 +182,6 @@ const styles = StyleSheet.create({
   emptyHint: {
     fontSize: fontSize.sm,
     color: palette.textFaint,
-    marginBottom: spacing.xl,
-  },
-  sectionSubtitle: {
-    fontSize: fontSize.sm,
-    color: palette.textSecondary,
-    lineHeight: 19,
-    marginBottom: spacing.lg,
-  },
-  zikrList: {
     marginBottom: spacing.xl,
   },
   chipScroll: {
