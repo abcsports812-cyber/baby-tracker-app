@@ -45,7 +45,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Zoni Baby Tracker uses your photos to attach pictures to memories and your baby's profile.",
-          "microphonePermission": false
+          "microphonePermission": false,
+          "cameraPermission": false
         }
       ],
       [
