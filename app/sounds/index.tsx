@@ -5,10 +5,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../src/components/ui/Screen';
 import { ModuleHeader } from '../../src/components/ui/ModuleHeader';
 import { Button } from '../../src/components/ui/Button';
-import { EmptyState } from '../../src/components/ui/EmptyState';
 import { SoundCard } from '../../src/components/sounds/SoundCard';
 import { SoundChip } from '../../src/components/sounds/SoundChip';
+import { ZikrCard } from '../../src/components/sounds/ZikrCard';
 import { FEATURED_SOUND_IDS, SOUNDS, getSoundById } from '../../src/data/sounds';
+import { KIDS_ZIKR_PHRASES } from '../../src/data/zikr';
 import { useFavoriteSoundsStore, useRecentSoundsStore } from '../../src/store';
 import { useSoundPlayerStore, useSoundSheetStore } from '../../src/store/soundPlayer';
 import { categoryColors, fontSize, palette, radius, spacing } from '../../src/theme';
@@ -29,7 +30,6 @@ export default function SoundsScreen() {
   const allIds = useMemo(() => SOUNDS.map((s) => s.id), []);
   const babyMusicSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'babyMusic'), []);
   const sleepSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'sleepSounds'), []);
-  const islamicNasheedSounds = useMemo(() => SOUNDS.filter((s) => s.category === 'islamicNasheeds'), []);
   const favoriteSounds = useMemo(() => favorites.map((id) => getSoundById(id)).filter(Boolean) as typeof SOUNDS, [favorites]);
   const recentSounds = useMemo(
     () => recent.map((e) => getSoundById(e.soundId)).filter(Boolean) as typeof SOUNDS,
@@ -164,31 +164,17 @@ export default function SoundsScreen() {
       </View>
 
       <View style={[styles.sectionHeaderRow, styles.sectionTitleRow]}>
-        <Ionicons name="moon-outline" size={18} color={palette.text} style={styles.sectionTitleIcon} />
-        <Text style={styles.sectionTitle}>Islamic Nasheeds</Text>
+        <Ionicons name="sparkles-outline" size={18} color={palette.text} style={styles.sectionTitleIcon} />
+        <Text style={styles.sectionTitle}>Kids’ Zikr</Text>
       </View>
-      {islamicNasheedSounds.length === 0 ? (
-        <EmptyState
-          illustration="sounds"
-          title="No nasheeds yet"
-          message="We're still verifying properly licensed recordings suitable for babies before adding any — nothing here is a placeholder."
-        />
-      ) : (
-        <View style={styles.grid}>
-          {islamicNasheedSounds.map((sound) => (
-            <SoundCard
-              key={sound.id}
-              sound={sound}
-              isActive={activeSoundIds.includes(sound.id)}
-              isPlaying={isPlaying}
-              isFavorite={isFavorite(sound.id)}
-              onPress={() => handleCardPress(sound.id)}
-              onTogglePlay={() => handleCardTogglePlay(sound.id)}
-              onToggleFavorite={() => toggleFavorite(sound.id)}
-            />
-          ))}
-        </View>
-      )}
+      <Text style={styles.sectionSubtitle}>
+        Simple words of remembrance for little ones to learn together. Narrated audio is coming soon — for now, read and say them together.
+      </Text>
+      <View style={styles.zikrList}>
+        {KIDS_ZIKR_PHRASES.map((phrase) => (
+          <ZikrCard key={phrase.id} phrase={phrase} />
+        ))}
+      </View>
 
       <View style={[styles.mixBanner, { backgroundColor: categoryColors.sound.bg }]}>
         <Text style={styles.mixBannerTitle}>Mix Sounds</Text>
@@ -219,6 +205,15 @@ const styles = StyleSheet.create({
   emptyHint: {
     fontSize: fontSize.sm,
     color: palette.textFaint,
+    marginBottom: spacing.xl,
+  },
+  sectionSubtitle: {
+    fontSize: fontSize.sm,
+    color: palette.textSecondary,
+    lineHeight: 19,
+    marginBottom: spacing.lg,
+  },
+  zikrList: {
     marginBottom: spacing.xl,
   },
   chipScroll: {
