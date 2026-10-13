@@ -37,7 +37,16 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          // Modal renders in its own native window, separate from the
+          // Activity's content view, so the Activity-level
+          // `windowSoftInputMode="adjustResize"` (Expo's native-template
+          // default) never reaches it -- without an explicit behavior here,
+          // Android leaves the sheet's height completely unchanged when the
+          // keyboard opens, so a multiline field (e.g. a note's body) and
+          // the user's typing position can end up hidden behind the
+          // keyboard. 'height' shrinks the sheet to the remaining visible
+          // space, same as 'padding' does on iOS.
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.sheetWrap}
         >
           <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.lg + insets.bottom }]}>

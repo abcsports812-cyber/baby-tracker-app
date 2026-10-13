@@ -17,7 +17,7 @@ import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
 import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
-import { daysBetween, formatDate, formatShortDate } from '../../src/lib/date';
+import { daysBetween, formatDate, formatShortDate, toISODate } from '../../src/lib/date';
 import { showToast } from '../../src/components/ui/Toast';
 import { cmToDisplay, cmToUnit, formatHeight, formatWeight, heightToCm, kgToDisplay, kgToUnit, weightToKg } from '../../src/lib/units';
 import { categoryColors, fontSize, palette, radius, spacing } from '../../src/theme';
@@ -196,7 +196,7 @@ export default function GrowthScreen() {
 
     const now = nowIso();
     const payload = {
-      date: date.toISOString().slice(0, 10),
+      date: toISODate(date),
       weightKg,
       heightCm: heightCmValue,
       headCircumferenceCm: headCmValue,
