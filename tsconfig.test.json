@@ -14,6 +14,7 @@
     "src/lib/units.ts",
     "src/lib/date.ts",
     "src/lib/growth.ts",
+    "src/lib/keyboardScroll.ts",
     "src/types/models.ts",
     "tests/**/*.ts"
   ]

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { createContext, useCallback, useContext, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { computeFocusScrollOffset } from '../../lib/keyboardScroll';
 import { fontSize, palette, radius, shadow, spacing } from '../../theme';
 import { Button } from './Button';
 
@@ -23,6 +25,24 @@ interface Props {
   children: React.ReactNode;
 }
 
+type MeasurableInput = {
+  measureLayout: (
+    node: number,
+    onSuccess: (x: number, y: number, width: number, height: number) => void,
+    onFail: () => void,
+  ) => void;
+} | null;
+
+const FormSheetScrollContext = createContext<((input: MeasurableInput) => void) | null>(null);
+
+/** Used by FormField (and any other input rendered inside a FormSheet) to
+ * scroll itself into view on focus. See the note above `scrollInputIntoView`
+ * for why this exists instead of relying on KeyboardAvoidingView/ScrollView's
+ * own built-in keyboard handling. */
+export function useFormSheetFocusScroll(): ((input: MeasurableInput) => void) | null {
+  return useContext(FormSheetScrollContext);
+}
+
 export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save', saveDisabled, children }: Props) {
   // react-native's Modal renders edge-to-edge, outside any parent
   // SafeAreaView's view-tree adjustment, so the sheet's own bottom padding
@@ -31,21 +51,57 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // needs the extra reservation added here; iOS already gets safe
   // bottom spacing from the existing `spacing.xl` constant.
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffsetRef = useRef(0);
+
+  // Content inside react-native's Android `Modal` lives in its own native
+  // Dialog window, separate from the Activity. The `Keyboard` module's
+  // `keyboardDidShow`/`keyboardDidHide` events -- which `KeyboardAvoidingView`
+  // and `ScrollView`'s own auto-scroll both depend on -- are only emitted
+  // from the Activity's root view (confirmed in react-native's
+  // ReactRootView.java: the listener is registered on the Activity's own
+  // root view, and Modal's content is a separate DialogRootViewGroup with
+  // no equivalent listener of its own). That's why switching
+  // `KeyboardAvoidingView`'s `behavior` prop had no effect: the event it
+  // reacts to doesn't reliably reach a sheet rendered inside this Modal on
+  // Android. So each focused field scrolls itself into view directly,
+  // using a measured layout instead of waiting on that event.
+  const scrollInputIntoView = useCallback((input: MeasurableInput) => {
+    if (!input || Platform.OS !== 'android') {
+      return;
+    }
+    const scrollView = scrollRef.current;
+    const innerNode = scrollView?.getInnerViewNode?.();
+    if (!scrollView || innerNode == null) {
+      return;
+    }
+    input.measureLayout(
+      innerNode,
+      (_x, y) => {
+        const target = computeFocusScrollOffset({
+          inputTop: y,
+          currentScrollOffset: scrollOffsetRef.current,
+        });
+        if (target != null) {
+          scrollView.scrollTo({ y: target, animated: true });
+        }
+      },
+      () => {},
+    );
+  }, []);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <KeyboardAvoidingView
-          // Modal renders in its own native window, separate from the
-          // Activity's content view, so the Activity-level
-          // `windowSoftInputMode="adjustResize"` (Expo's native-template
-          // default) never reaches it -- without an explicit behavior here,
-          // Android leaves the sheet's height completely unchanged when the
-          // keyboard opens, so a multiline field (e.g. a note's body) and
-          // the user's typing position can end up hidden behind the
-          // keyboard. 'height' shrinks the sheet to the remaining visible
-          // space, same as 'padding' does on iOS.
+          // 'padding' on iOS reliably shrinks the sheet to the visible
+          // space, since iOS keyboard notifications aren't window-scoped.
+          // 'height' on Android is kept as a harmless best-effort fallback
+          // for whatever devices it does work on, but it isn't what
+          // actually fixes the keyboard covering a field here -- see
+          // `scrollInputIntoView` above for the real fix and why this
+          // alone can't be trusted on Android.
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.sheetWrap}
         >
@@ -58,12 +114,17 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
               </Pressable>
             </View>
             <ScrollView
+              ref={scrollRef}
               style={styles.body}
               contentContainerStyle={{ paddingBottom: spacing.xl }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              onScroll={(e) => {
+                scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+              }}
+              scrollEventThrottle={32}
             >
-              {children}
+              <FormSheetScrollContext.Provider value={scrollInputIntoView}>{children}</FormSheetScrollContext.Provider>
             </ScrollView>
             <View style={styles.footer}>
               <Button label={saveLabel} onPress={onSave} disabled={saveDisabled} fullWidth size="lg" />
