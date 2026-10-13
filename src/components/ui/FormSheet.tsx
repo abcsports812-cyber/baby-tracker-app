@@ -27,7 +27,7 @@ interface Props {
 
 type MeasurableInput = {
   measureLayout: (
-    node: number,
+    relativeToNativeComponentRef: any,
     onSuccess: (x: number, y: number, width: number, height: number) => void,
     onFail: () => void,
   ) => void;
@@ -52,6 +52,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // bottom spacing from the existing `spacing.xl` constant.
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  const innerViewRef = useRef<View>(null);
   const scrollOffsetRef = useRef(0);
 
   // Content inside react-native's Android `Modal` lives in its own native
@@ -66,17 +67,30 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // reacts to doesn't reliably reach a sheet rendered inside this Modal on
   // Android. So each focused field scrolls itself into view directly,
   // using a measured layout instead of waiting on that event.
+  //
+  // That measured layout must be taken relative to an actual component
+  // *ref*, not a numeric node handle: this app runs on the New Architecture
+  // (Fabric -- `newArchEnabled=true`), where every host ref is a
+  // `ReactNativeElement`. Its `measureLayout` (see react-native's
+  // ReactNativeElement.js) does `if (!(relativeToNativeNode instanceof
+  // ReactNativeElement)) return;` *before* calling either callback --
+  // silently, since the dev-only warning for that branch is stripped from
+  // a release build. `ScrollView.getInnerViewNode()` returns a legacy
+  // `findNodeHandle()` number, which fails that check every time, so the
+  // first version of this fix never actually scrolled anything: the
+  // success callback below was never reached. `innerViewRef` (passed to
+  // the ScrollView below) gives the real element instead.
   const scrollInputIntoView = useCallback((input: MeasurableInput) => {
     if (!input || Platform.OS !== 'android') {
       return;
     }
     const scrollView = scrollRef.current;
-    const innerNode = scrollView?.getInnerViewNode?.();
-    if (!scrollView || innerNode == null) {
+    const innerView = innerViewRef.current;
+    if (!scrollView || !innerView) {
       return;
     }
     input.measureLayout(
-      innerNode,
+      innerView,
       (_x, y) => {
         const target = computeFocusScrollOffset({
           inputTop: y,
@@ -115,6 +129,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
             </View>
             <ScrollView
               ref={scrollRef}
+              innerViewRef={innerViewRef as unknown as React.RefObject<View>}
               style={styles.body}
               contentContainerStyle={{ paddingBottom: spacing.xl }}
               keyboardShouldPersistTaps="handled"
