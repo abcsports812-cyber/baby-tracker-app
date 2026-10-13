@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": ".test-build",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "src/lib/units.ts",
+    "src/lib/date.ts",
+    "src/lib/growth.ts",
+    "src/types/models.ts",
+    "tests/**/*.ts"
+  ]
+}

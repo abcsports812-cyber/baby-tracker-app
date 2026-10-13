@@ -13,12 +13,13 @@ import { useBabyProfileStore, useDiaperStore, useFeedingStore, useGrowthStore, u
 import { useBabyScoped } from '../../src/lib/babyScope';
 import { fontSize, palette, radius, spacing } from '../../src/theme';
 import { formatDate, formatDuration, formatTime, isSameDay } from '../../src/lib/date';
-import { formatWeight } from '../../src/lib/units';
 import { eventTimeLabel, useTimelineEvents } from '../../src/lib/timeline';
+import { selectLatestGrowthMetrics } from '../../src/lib/growth';
 
 export default function HomeScreen() {
   const profile = useBabyProfileStore((s) => s.value);
   const weightUnit = useSettingsStore((s) => s.value.weightUnit);
+  const heightUnit = useSettingsStore((s) => s.value.heightUnit);
   const feeding = useBabyScoped(useFeedingStore((s) => s.items));
   const diaper = useBabyScoped(useDiaperStore((s) => s.items));
   const sleep = useBabyScoped(useSleepStore((s) => s.items));
@@ -34,8 +35,16 @@ export default function HomeScreen() {
   const feedingToday = babyFeeding.filter((f) => isSameDay(f.startTime, today));
   const diaperToday = diaper.filter((d) => isSameDay(d.time, today));
   const sleepToday = sleep.filter((s) => isSameDay(s.startTime, today));
-  const lastGrowth = [...growth].sort((a, b) => b.date.localeCompare(a.date))[0];
   const completedMilestones = milestones.filter((m) => m.completed).length;
+
+  const growthMetrics = useMemo(
+    () => selectLatestGrowthMetrics(growth, weightUnit, heightUnit),
+    [growth, weightUnit, heightUnit]
+  );
+  const growthValue = growthMetrics[0]?.text ?? 'No data';
+  const growthSubtitle = growthMetrics.length > 0
+    ? [...growthMetrics.slice(1).map((m) => m.text), `As of ${formatDate(growthMetrics[0].date)}`].join(' · ')
+    : 'Add first measurement';
 
   const sleepMinutesToday = sleepToday.reduce((sum, s) => {
     if (!s.endTime) return sum;
@@ -101,8 +110,8 @@ export default function HomeScreen() {
           category="growth"
           icon="trending-up"
           title="Growth"
-          value={lastGrowth?.weightKg != null ? formatWeight(lastGrowth.weightKg, weightUnit) : 'No data'}
-          subtitle={lastGrowth ? `As of ${formatDate(lastGrowth.date)}` : 'Add first measurement'}
+          value={growthValue}
+          subtitle={growthSubtitle}
           onPress={() => router.push('/growth')}
           onPressAdd={() => router.push('/growth?add=1')}
         />

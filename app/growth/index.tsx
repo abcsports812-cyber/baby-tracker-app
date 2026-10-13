@@ -14,6 +14,7 @@ import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
 import { LineChart } from '../../src/components/charts/LineChart';
 import { useBabyProfileStore, useGrowthStore, useSettingsStore } from '../../src/store';
 import { useAutoOpenAdd } from '../../src/hooks/useAutoOpenAdd';
+import { useAutoOpenEdit } from '../../src/hooks/useAutoOpenEdit';
 import { stampActiveBaby, useBabyScoped } from '../../src/lib/babyScope';
 import { generateId, nowIso } from '../../src/lib/id';
 import { daysBetween, formatDate, formatShortDate } from '../../src/lib/date';
@@ -142,6 +143,8 @@ export default function GrowthScreen() {
     setNotes(item.notes ?? '');
     setSheetOpen(true);
   };
+
+  useAutoOpenEdit(items, openEdit);
 
   const save = () => {
     if (!weight.trim() && !height.trim() && !headCirc.trim()) {

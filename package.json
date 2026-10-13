@@ -38,6 +38,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/node": "22.18.9",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.12",
     "eslint": "^9.39.5",
@@ -50,7 +51,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "tsc -p tsconfig.test.json && node --test .test-build/tests/*.test.js"
   },
   "private": true
 }

@@ -7,10 +7,12 @@ import {
   useBabyCareStore,
   useDiaperStore,
   useFeedingStore,
+  useGrowthStore,
   useHealthRecordStore,
   useMemoryStore,
   useMilestoneStore,
   useNoteStore,
+  useSettingsStore,
   useSleepStore,
   useToothStore,
   useVaccinationStore,
@@ -19,6 +21,7 @@ import { useBabyScoped } from './babyScope';
 import { formatDuration, formatTime, isSameDay } from './date';
 import { activityLabel, babyCareLabel } from './labels';
 import { toothSlotLabel } from './teeth';
+import { growthMeasurementSubtitle } from './growth';
 
 export interface TimelineEvent {
   id: string;
@@ -49,6 +52,9 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
   const memories = useBabyScoped(useMemoryStore((s) => s.items));
   const notes = useBabyScoped(useNoteStore((s) => s.items));
   const teeth = useBabyScoped(useToothStore((s) => s.items));
+  const growth = useBabyScoped(useGrowthStore((s) => s.items));
+  const weightUnit = useSettingsStore((s) => s.value.weightUnit);
+  const heightUnit = useSettingsStore((s) => s.value.heightUnit);
 
   return useMemo(() => {
     const events: TimelineEvent[] = [];
@@ -175,6 +181,18 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
       events.push({ id: n.id, category: 'note', icon: 'document-text', title: n.title, subtitle: n.body, time: n.date, href: `/journal/note/${n.id}` });
     });
 
+    growth.filter((g) => isSameDay(g.date, date)).forEach((g) => {
+      events.push({
+        id: g.id,
+        category: 'growth',
+        icon: 'trending-up',
+        title: 'Growth measurement',
+        subtitle: growthMeasurementSubtitle(g, weightUnit, heightUnit),
+        time: g.date,
+        href: `/growth?openId=${g.id}`,
+      });
+    });
+
     teeth.forEach((t) => {
       if (t.eruptionDate && isSameDay(t.eruptionDate, date)) {
         const isEmerging = t.status === 'emerging';
@@ -207,7 +225,7 @@ export function useTimelineEvents(date: Date, sort: 'asc' | 'desc' = 'desc'): Ti
     });
 
     return events;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, date, sort]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, growth, weightUnit, heightUnit, date, sort]);
 }
 
 export function eventTimeLabel(event: TimelineEvent): string {
@@ -227,6 +245,7 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
   const memories = useBabyScoped(useMemoryStore((s) => s.items));
   const notes = useBabyScoped(useNoteStore((s) => s.items));
   const teeth = useBabyScoped(useToothStore((s) => s.items));
+  const growth = useBabyScoped(useGrowthStore((s) => s.items));
 
   return useMemo(() => {
     const year = monthDate.getFullYear();
@@ -256,9 +275,10 @@ export function useMonthEventCategories(monthDate: Date): Map<string, CategoryKe
       if (t.eruptionDate) mark(t.eruptionDate, 'teeth');
       if (t.lossDate) mark(t.lossDate, 'teeth');
     });
+    growth.forEach((g) => mark(g.date, 'growth'));
 
     const result = new Map<string, CategoryKey[]>();
     map.forEach((set, key) => result.set(key, Array.from(set)));
     return result;
-  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, monthDate]);
+  }, [feeding, diaper, sleep, health, vaccinations, appointments, milestones, babyCare, activities, memories, notes, teeth, growth, monthDate]);
 }
