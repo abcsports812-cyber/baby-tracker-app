@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.babytracker.app"
     },
     "android": {
-      "package": "com.babytracker.app",
+      "package": "com.zonibaby.tracker",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FAD7DF",
