@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { fontSize, palette, radius, spacing } from '../../theme';
-import { useFormSheetFocusScroll } from './FormSheet';
+import { useKeyboardAwareScroll } from './KeyboardAwareScroll';
 
 interface Props {
   label: string;
@@ -23,11 +23,11 @@ export function FormField({
   optional = false,
 }: Props) {
   const inputRef = useRef<TextInput>(null);
-  const scrollIntoView = useFormSheetFocusScroll();
+  const scrollIntoView = useKeyboardAwareScroll();
 
   // Scroll this field above the keyboard on focus, and again as a
-  // multiline field grows while typing -- see useFormSheetFocusScroll's
-  // definition in FormSheet.tsx for why this can't rely on
+  // multiline field grows while typing -- see useKeyboardAwareScroll's
+  // definition in KeyboardAwareScroll.tsx for why this can't rely on
   // KeyboardAvoidingView here. The short delay lets the keyboard's open
   // animation start before measuring.
   const scrollSoon = () => {

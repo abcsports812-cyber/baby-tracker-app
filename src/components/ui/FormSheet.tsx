@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { createContext, useCallback, useContext, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { computeFocusScrollOffset } from '../../lib/keyboardScroll';
 import { fontSize, palette, radius, shadow, spacing } from '../../theme';
 import { Button } from './Button';
+import { KeyboardAwareScrollProvider, useKeyboardAwareScrollRefs } from './KeyboardAwareScroll';
 
 interface Props {
   visible: boolean;
@@ -25,24 +24,6 @@ interface Props {
   children: React.ReactNode;
 }
 
-type MeasurableInput = {
-  measureLayout: (
-    relativeToNativeComponentRef: any,
-    onSuccess: (x: number, y: number, width: number, height: number) => void,
-    onFail: () => void,
-  ) => void;
-} | null;
-
-const FormSheetScrollContext = createContext<((input: MeasurableInput) => void) | null>(null);
-
-/** Used by FormField (and any other input rendered inside a FormSheet) to
- * scroll itself into view on focus. See the note above `scrollInputIntoView`
- * for why this exists instead of relying on KeyboardAvoidingView/ScrollView's
- * own built-in keyboard handling. */
-export function useFormSheetFocusScroll(): ((input: MeasurableInput) => void) | null {
-  return useContext(FormSheetScrollContext);
-}
-
 export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save', saveDisabled, children }: Props) {
   // react-native's Modal renders edge-to-edge, outside any parent
   // SafeAreaView's view-tree adjustment, so the sheet's own bottom padding
@@ -51,58 +32,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // needs the extra reservation added here; iOS already gets safe
   // bottom spacing from the existing `spacing.xl` constant.
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
-  const innerViewRef = useRef<View>(null);
-  const scrollOffsetRef = useRef(0);
-
-  // Content inside react-native's Android `Modal` lives in its own native
-  // Dialog window, separate from the Activity. The `Keyboard` module's
-  // `keyboardDidShow`/`keyboardDidHide` events -- which `KeyboardAvoidingView`
-  // and `ScrollView`'s own auto-scroll both depend on -- are only emitted
-  // from the Activity's root view (confirmed in react-native's
-  // ReactRootView.java: the listener is registered on the Activity's own
-  // root view, and Modal's content is a separate DialogRootViewGroup with
-  // no equivalent listener of its own). That's why switching
-  // `KeyboardAvoidingView`'s `behavior` prop had no effect: the event it
-  // reacts to doesn't reliably reach a sheet rendered inside this Modal on
-  // Android. So each focused field scrolls itself into view directly,
-  // using a measured layout instead of waiting on that event.
-  //
-  // That measured layout must be taken relative to an actual component
-  // *ref*, not a numeric node handle: this app runs on the New Architecture
-  // (Fabric -- `newArchEnabled=true`), where every host ref is a
-  // `ReactNativeElement`. Its `measureLayout` (see react-native's
-  // ReactNativeElement.js) does `if (!(relativeToNativeNode instanceof
-  // ReactNativeElement)) return;` *before* calling either callback --
-  // silently, since the dev-only warning for that branch is stripped from
-  // a release build. `ScrollView.getInnerViewNode()` returns a legacy
-  // `findNodeHandle()` number, which fails that check every time, so the
-  // first version of this fix never actually scrolled anything: the
-  // success callback below was never reached. `innerViewRef` (passed to
-  // the ScrollView below) gives the real element instead.
-  const scrollInputIntoView = useCallback((input: MeasurableInput) => {
-    if (!input || Platform.OS !== 'android') {
-      return;
-    }
-    const scrollView = scrollRef.current;
-    const innerView = innerViewRef.current;
-    if (!scrollView || !innerView) {
-      return;
-    }
-    input.measureLayout(
-      innerView,
-      (_x, y) => {
-        const target = computeFocusScrollOffset({
-          inputTop: y,
-          currentScrollOffset: scrollOffsetRef.current,
-        });
-        if (target != null) {
-          scrollView.scrollTo({ y: target, animated: true });
-        }
-      },
-      () => {},
-    );
-  }, []);
+  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll } = useKeyboardAwareScrollRefs();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -133,13 +63,12 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
               style={styles.body}
               contentContainerStyle={{ paddingBottom: spacing.xl }}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               showsVerticalScrollIndicator={false}
-              onScroll={(e) => {
-                scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
-              }}
+              onScroll={onScroll}
               scrollEventThrottle={32}
             >
-              <FormSheetScrollContext.Provider value={scrollInputIntoView}>{children}</FormSheetScrollContext.Provider>
+              <KeyboardAwareScrollProvider value={scrollInputIntoView}>{children}</KeyboardAwareScrollProvider>
             </ScrollView>
             <View style={styles.footer}>
               <Button label={saveLabel} onPress={onSave} disabled={saveDisabled} fullWidth size="lg" />

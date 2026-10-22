@@ -62,7 +62,12 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+      {/* No ScrollView here (fixed, centered layout, by design) -- unlike
+          `undefined`, 'height' actually shrinks this to the space above
+          the keyboard on Android, since this screen isn't inside a Modal
+          (see KeyboardAwareScroll.tsx for why that distinction matters),
+          which is what keeps the step's Continue/Start button reachable. */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <View style={styles.dots}>
           {STEPS.map((s, i) => (
             <View key={s} style={[styles.dot, i === step && styles.dotActive]} />
