@@ -26,11 +26,12 @@ export type IllustrationKey =
   | 'pumping'
   | 'teeth';
 
-// All 18 approved illustrations are integrated here. "activities" is
-// intentionally left without a source: the supplied 19th image (a baby
-// journaling) doesn't visually match the Activities module (play, tummy
-// time, reading, outdoor, music, sensory), so it falls back to a themed
-// icon badge instead of forcing a mismatched illustration.
+// "activities" is intentionally left without a source: the supplied 19th
+// image (a baby journaling) doesn't visually match the Activities module
+// (play, tummy time, reading, outdoor, music, sensory), so it falls back
+// to a themed icon badge instead of forcing a mismatched illustration.
+// "guides" is likewise still without one -- no approved illustration
+// exists for it yet.
 export const illustrationSources: Partial<Record<IllustrationKey, ReturnType<typeof require>>> = {
   home: require('../../assets/illustrations/home.webp'),
   calendar: require('../../assets/illustrations/calendar.webp'),
@@ -50,6 +51,9 @@ export const illustrationSources: Partial<Record<IllustrationKey, ReturnType<typ
   doctor: require('../../assets/illustrations/doctor.webp'),
   settings: require('../../assets/illustrations/settings.webp'),
   solidFood: require('../../assets/illustrations/solid-food.webp'),
+  sounds: require('../../assets/illustrations/sounds.webp'),
+  pumping: require('../../assets/illustrations/pumping.webp'),
+  teeth: require('../../assets/illustrations/teeth.webp'),
 };
 
 interface IconFallback {
@@ -80,7 +84,5 @@ export const illustrationIconFallback: Record<IllustrationKey, IconFallback> = {
   sounds: { icon: 'headset', category: 'sound' },
   guides: { icon: 'book-outline', category: 'growth' },
   pumping: { icon: 'timer-outline', category: 'feeding' },
-  // No bespoke illustration exists for Teeth yet — same situation as
-  // 'activities' — so it falls back to a themed icon badge.
   teeth: { icon: 'happy-outline', category: 'teeth' },
 };
