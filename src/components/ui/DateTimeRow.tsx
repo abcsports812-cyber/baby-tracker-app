@@ -10,12 +10,20 @@ interface Props {
   maximumDate?: Date;
 }
 
-export function DateTimeRow({ value, onChange, maximumDate }: Props) {
+export function DateTimeRow({ label, value, onChange, maximumDate }: Props) {
+  // `label` (e.g. "Start"/"End") used to be accepted but silently ignored,
+  // so two DateTimeRows in the same form -- like Sleep's start/end pair --
+  // both rendered as plain, identical-looking "Date"/"Time" fields with no
+  // way to tell which was which. Folding it into each field's own label
+  // keeps every existing single-row caller (none of which pass `label`)
+  // unchanged.
+  const dateLabel = label ? `${label} Date` : 'Date';
+  const timeLabel = label ? `${label} Time` : 'Time';
   return (
     <View style={styles.row}>
       <View style={{ flex: 1 }}>
         <DateTimeField
-          label="Date"
+          label={dateLabel}
           value={value}
           mode="date"
           maximumDate={maximumDate}
@@ -23,7 +31,7 @@ export function DateTimeRow({ value, onChange, maximumDate }: Props) {
         />
       </View>
       <View style={{ flex: 1 }}>
-        <DateTimeField label="Time" value={value} mode="time" onChange={(t) => onChange(mergeTimePart(value, t))} />
+        <DateTimeField label={timeLabel} value={value} mode="time" onChange={(t) => onChange(mergeTimePart(value, t))} />
       </View>
     </View>
   );
