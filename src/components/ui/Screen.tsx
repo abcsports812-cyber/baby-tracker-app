@@ -16,7 +16,7 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
   // why a focused field needs this rather than relying on
   // ScrollView/KeyboardAvoidingView alone to stay clear of the Android
   // keyboard.
-  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll } = useKeyboardAwareScrollRefs();
+  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll, onLayout } = useKeyboardAwareScrollRefs();
 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
@@ -31,6 +31,7 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             onScroll={onScroll}
+            onLayout={onLayout}
             scrollEventThrottle={32}
           >
             <KeyboardAwareScrollProvider value={scrollInputIntoView}>{children}</KeyboardAwareScrollProvider>

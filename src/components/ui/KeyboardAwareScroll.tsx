@@ -62,6 +62,7 @@ export function useKeyboardAwareScrollRefs() {
   const scrollRef = useRef<ScrollView>(null);
   const innerViewRef = useRef<View>(null);
   const scrollOffsetRef = useRef(0);
+  const viewportHeightRef = useRef(0);
 
   const scrollInputIntoView = useCallback<ScrollInputIntoView>((input) => {
     if (!input || Platform.OS !== 'android') {
@@ -69,15 +70,17 @@ export function useKeyboardAwareScrollRefs() {
     }
     const scrollView = scrollRef.current;
     const innerView = innerViewRef.current;
-    if (!scrollView || !innerView) {
+    if (!scrollView || !innerView || viewportHeightRef.current === 0) {
       return;
     }
     input.measureLayout(
       innerView,
-      (_x, y) => {
+      (_x, y, _width, height) => {
         const target = computeFocusScrollOffset({
           inputTop: y,
+          inputHeight: height,
           currentScrollOffset: scrollOffsetRef.current,
+          viewportHeight: viewportHeightRef.current,
         });
         if (target != null) {
           scrollView.scrollTo({ y: target, animated: true });
@@ -91,5 +94,9 @@ export function useKeyboardAwareScrollRefs() {
     scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
   }, []);
 
-  return { scrollRef, innerViewRef, scrollInputIntoView, onScroll };
+  const onLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
+    viewportHeightRef.current = e.nativeEvent.layout.height;
+  }, []);
+
+  return { scrollRef, innerViewRef, scrollInputIntoView, onScroll, onLayout };
 }

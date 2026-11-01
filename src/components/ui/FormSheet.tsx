@@ -32,7 +32,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // needs the extra reservation added here; iOS already gets safe
   // bottom spacing from the existing `spacing.xl` constant.
   const insets = useSafeAreaInsets();
-  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll } = useKeyboardAwareScrollRefs();
+  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll, onLayout } = useKeyboardAwareScrollRefs();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -66,6 +66,7 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               showsVerticalScrollIndicator={false}
               onScroll={onScroll}
+              onLayout={onLayout}
               scrollEventThrottle={32}
             >
               <KeyboardAwareScrollProvider value={scrollInputIntoView}>{children}</KeyboardAwareScrollProvider>
