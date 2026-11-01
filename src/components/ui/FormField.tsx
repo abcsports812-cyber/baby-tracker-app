@@ -23,15 +23,23 @@ export function FormField({
   optional = false,
 }: Props) {
   const inputRef = useRef<TextInput>(null);
-  const scrollIntoView = useKeyboardAwareScroll();
+  const keyboardAware = useKeyboardAwareScroll();
 
   // Scroll this field above the keyboard on focus, and again as a
-  // multiline field grows while typing -- see useKeyboardAwareScroll's
+  // multiline field grows while typing -- see useKeyboardAwareScrollRefs'
   // definition in KeyboardAwareScroll.tsx for why this can't rely on
-  // KeyboardAvoidingView here. The short delay lets the keyboard's open
-  // animation start before measuring.
-  const scrollSoon = () => {
-    setTimeout(() => scrollIntoView?.(inputRef.current), 50);
+  // KeyboardAvoidingView here, and for why it needs no artificial delay:
+  // the actual sequencing (reserve scroll room, confirm it landed, only
+  // then scroll) is handled there via the ScrollView's own
+  // onContentSizeChange, not a timer.
+  const handleFocus = () => {
+    keyboardAware?.scrollIntoView(inputRef.current);
+  };
+  const handleContentSizeChange = () => {
+    keyboardAware?.scrollIntoView(inputRef.current);
+  };
+  const handleBlur = () => {
+    keyboardAware?.clearFocusScroll();
   };
 
   return (
@@ -48,8 +56,9 @@ export function FormField({
         placeholderTextColor={palette.textFaint}
         keyboardType={keyboardType}
         multiline={multiline}
-        onFocus={scrollSoon}
-        onContentSizeChange={multiline ? scrollSoon : undefined}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onContentSizeChange={multiline ? handleContentSizeChange : undefined}
         style={[styles.input, multiline && styles.multiline]}
       />
     </View>

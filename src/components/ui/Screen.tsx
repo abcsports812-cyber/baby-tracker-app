@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette, spacing } from '../../theme';
@@ -16,7 +17,25 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
   // why a focused field needs this rather than relying on
   // ScrollView/KeyboardAvoidingView alone to stay clear of the Android
   // keyboard.
-  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll, onLayout } = useKeyboardAwareScrollRefs();
+  const {
+    scrollRef,
+    innerViewRef,
+    scrollInputIntoView,
+    clearFocusScroll,
+    onScroll,
+    onLayout,
+    onContentSizeChange,
+    extraBottomPadding,
+  } = useKeyboardAwareScrollRefs();
+  const keyboardAwareApi = useMemo(
+    () => ({ scrollIntoView: scrollInputIntoView, clearFocusScroll }),
+    [scrollInputIntoView, clearFocusScroll],
+  );
+  // Reserved extra scroll space (see useKeyboardAwareScrollRefs) must be
+  // *added* to whatever bottom padding this screen already has, not
+  // override it -- a caller's own `style` prop can set its own
+  // paddingBottom, so that takes precedence over the default here.
+  const basePaddingBottom = (style?.paddingBottom as number | undefined) ?? styles.content.paddingBottom;
 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
@@ -26,15 +45,20 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
             ref={scrollRef}
             innerViewRef={innerViewRef as unknown as React.RefObject<View>}
             style={styles.flex}
-            contentContainerStyle={[styles.content, style]}
+            contentContainerStyle={[
+              styles.content,
+              style,
+              { paddingBottom: basePaddingBottom + extraBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             onScroll={onScroll}
             onLayout={onLayout}
+            onContentSizeChange={onContentSizeChange}
             scrollEventThrottle={32}
           >
-            <KeyboardAwareScrollProvider value={scrollInputIntoView}>{children}</KeyboardAwareScrollProvider>
+            <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (

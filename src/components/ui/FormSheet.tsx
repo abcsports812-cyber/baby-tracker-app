@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fontSize, palette, radius, shadow, spacing } from '../../theme';
 import { Button } from './Button';
+import { DialogKeyboardObserver } from './DialogKeyboardObserver';
 import { KeyboardAwareScrollProvider, useKeyboardAwareScrollRefs } from './KeyboardAwareScroll';
 
 interface Props {
@@ -32,7 +34,21 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
   // needs the extra reservation added here; iOS already gets safe
   // bottom spacing from the existing `spacing.xl` constant.
   const insets = useSafeAreaInsets();
-  const { scrollRef, innerViewRef, scrollInputIntoView, onScroll, onLayout } = useKeyboardAwareScrollRefs();
+  const {
+    scrollRef,
+    innerViewRef,
+    scrollInputIntoView,
+    clearFocusScroll,
+    handleDialogKeyboardChange,
+    onScroll,
+    onLayout,
+    onContentSizeChange,
+    extraBottomPadding,
+  } = useKeyboardAwareScrollRefs();
+  const keyboardAwareApi = useMemo(
+    () => ({ scrollIntoView: scrollInputIntoView, clearFocusScroll }),
+    [scrollInputIntoView, clearFocusScroll],
+  );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -44,12 +60,16 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
           // 'height' on Android is kept as a harmless best-effort fallback
           // for whatever devices it does work on, but it isn't what
           // actually fixes the keyboard covering a field here -- see
-          // `scrollInputIntoView` above for the real fix and why this
-          // alone can't be trusted on Android.
+          // useKeyboardAwareScrollRefs (KeyboardAwareScroll.tsx) for the
+          // real fix and why this alone can't be trusted on Android.
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.sheetWrap}
         >
           <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.lg + insets.bottom }]}>
+            {/* Mounted inside this Modal's own Dialog window -- see DialogKeyboardObserver
+                and DialogKeyboardInsetsView.kt for why that placement is what makes its
+                keyboard-visibility signal reliable here, unlike an Activity-level listener. */}
+            <DialogKeyboardObserver onKeyboardChange={handleDialogKeyboardChange} />
             <View style={styles.handle} />
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>
@@ -61,15 +81,16 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
               ref={scrollRef}
               innerViewRef={innerViewRef as unknown as React.RefObject<View>}
               style={styles.body}
-              contentContainerStyle={{ paddingBottom: spacing.xl }}
+              contentContainerStyle={{ paddingBottom: spacing.xl + extraBottomPadding }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               showsVerticalScrollIndicator={false}
               onScroll={onScroll}
               onLayout={onLayout}
+              onContentSizeChange={onContentSizeChange}
               scrollEventThrottle={32}
             >
-              <KeyboardAwareScrollProvider value={scrollInputIntoView}>{children}</KeyboardAwareScrollProvider>
+              <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
             </ScrollView>
             <View style={styles.footer}>
               <Button label={saveLabel} onPress={onSave} disabled={saveDisabled} fullWidth size="lg" />

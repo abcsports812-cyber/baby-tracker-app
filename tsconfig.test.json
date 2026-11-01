@@ -15,6 +15,7 @@
     "src/lib/date.ts",
     "src/lib/growth.ts",
     "src/lib/keyboardScroll.ts",
+    "src/lib/dialogKeyboardInsets.ts",
     "src/types/models.ts",
     "tests/**/*.ts"
   ]
