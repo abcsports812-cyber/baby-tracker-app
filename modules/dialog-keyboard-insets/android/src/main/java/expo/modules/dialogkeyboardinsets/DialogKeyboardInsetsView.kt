@@ -1,7 +1,6 @@
 package expo.modules.dialogkeyboardinsets
 
 import android.content.Context
-import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import expo.modules.kotlin.AppContext
@@ -34,8 +33,20 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
   private var lastVisible: Boolean? = null
   private var lastHeight: Int = -1
 
-  private val insetsListener =
-    OnApplyWindowInsetsListener { _, insets ->
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    // Passed as a trailing lambda directly to ViewCompat.setOnApplyWindowInsetsListener,
+    // rather than built via a named `OnApplyWindowInsetsListener { ... }` SAM-constructor
+    // expression stored in a property: this class extends ExpoView -> ... -> View, which
+    // declares its own nested `View.OnApplyWindowInsetsListener` interface, and Kotlin's
+    // name resolution gives that inherited nested classifier priority over the top-level
+    // `androidx.core.view.OnApplyWindowInsetsListener` import when a bare
+    // `OnApplyWindowInsetsListener` identifier is used inside this class body. That
+    // silently built the wrong (platform) listener type, caught at compile time only when
+    // passed into this AndroidX Compat call, which requires the AndroidX type. Passing the
+    // lambda directly here instead lets its SAM target type come from this function's own
+    // declared parameter type, never from a bare name lookup in our class scope.
+    ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
       val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
       val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
@@ -47,10 +58,6 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
 
       insets
     }
-
-  override fun onAttachedToWindow() {
-    super.onAttachedToWindow()
-    ViewCompat.setOnApplyWindowInsetsListener(this, insetsListener)
     // setOnApplyWindowInsetsListener only fires on the *next* insets change. If the
     // keyboard is already open when this view (re)attaches -- e.g. the Note field was
     // mid-edit while this view's own parent was briefly detached/reattached -- explicitly
