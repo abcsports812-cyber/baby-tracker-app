@@ -1,7 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Keyboard, Platform, ScrollView, View } from 'react-native';
 import { dialogKeyboardAction, effectiveViewportHeight } from '../../lib/dialogKeyboardInsets';
-import { computeFocusScrollOffset, isStaleScrollAttempt, neededExtraBottomPadding } from '../../lib/keyboardScroll';
+import {
+  computeFocusScrollOffset,
+  isStaleScrollAttempt,
+  isViewportMeasurementTrustworthy,
+  neededExtraBottomPadding,
+} from '../../lib/keyboardScroll';
 import { createTrailingDebouncer } from '../../lib/trailingDebouncer';
 // TEMPORARY DIAGNOSTIC LOGGING -- see keyboardDiagLog.ts. Remove with it.
 import { kbdLog } from '../../lib/keyboardDiagLog';
@@ -465,8 +470,22 @@ export function useKeyboardAwareScrollRefs() {
     scrollOffsetRef.current = y;
   }, []);
 
+  // See isViewportMeasurementTrustworthy's doc comment: a reading taken
+  // while extraBottomPadding is already reserved reflects that padding's
+  // own self-inflation of this ScrollView's content (FormSheet specifically
+  // -- its `body` is `flexGrow: 0`, so it sizes to content, not to a fixed
+  // available-space allocation the way Screen's `flex: 1` ScrollView does),
+  // not the sheet's actual available space -- confirmed as the cause of a
+  // captured device-log feedback loop where the reported height and the
+  // computed scroll target grew in lockstep, unbounded. Ignoring it here
+  // keeps the baseline this hook's own padding reservation can never
+  // contaminate; it's refreshed again once extraBottomPadding returns to 0.
   const onLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
     const height = e.nativeEvent.layout.height;
+    if (!isViewportMeasurementTrustworthy(extraBottomPaddingRef.current)) {
+      kbdLog('onLayout:ignoredSelfInflated', { reported: height, keptBaseline: viewportHeightRef.current });
+      return;
+    }
     if (height !== viewportHeightRef.current) {
       kbdLog('onLayout', { from: viewportHeightRef.current, to: height });
     }

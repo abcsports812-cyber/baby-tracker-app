@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clampScrollOffset, computeFocusScrollOffset, isStaleScrollAttempt, neededExtraBottomPadding } from '../src/lib/keyboardScroll';
+import {
+  clampScrollOffset,
+  computeFocusScrollOffset,
+  isStaleScrollAttempt,
+  isViewportMeasurementTrustworthy,
+  neededExtraBottomPadding,
+} from '../src/lib/keyboardScroll';
 
 // Regression guard for the Notes keyboard bug: typed text becoming hidden
 // as the multiline "Note" body field grows. The real fix lives in
@@ -281,4 +287,82 @@ test('REGRESSION: rapid focus switching across three fields leaves only the last
   assert.equal(isStaleScrollAttempt(fieldA, current), true);
   assert.equal(isStaleScrollAttempt(fieldB, current), true);
   assert.equal(isStaleScrollAttempt(fieldC, current), false); // the latest -- still valid
+});
+
+test('isViewportMeasurementTrustworthy: trusts a reading only while no padding is reserved', () => {
+  assert.equal(isViewportMeasurementTrustworthy(0), true);
+  assert.equal(isViewportMeasurementTrustworthy(1), false);
+  assert.equal(isViewportMeasurementTrustworthy(77), false);
+  assert.equal(isViewportMeasurementTrustworthy(500), false);
+});
+
+// REGRESSION: captured directly from a real Android device log -- a
+// repeating ~16ms cycle where the reported viewport height (onLayout) and
+// the computed scroll target (performScroll) both grew in lockstep, never
+// settling. Root cause: FormSheet's ScrollView (`body`, `flexGrow: 0`,
+// inside a `sheet` with no `flex: 1` of its own) sizes itself to its own
+// content, so reserving extraBottomPadding grows the ScrollView's own
+// onLayout-reported height by roughly the same amount -- and
+// neededExtraBottomPadding returns that same viewportHeight back as the
+// padding to reserve, so each cycle reserves baseline + the padding from
+// the cycle before: P(n+1) = baseline + P(n), diverging by a fixed
+// increment forever instead of converging. These two tests characterize
+// that divergence directly, then prove isViewportMeasurementTrustworthy's
+// guard (wired into KeyboardAwareScroll's onLayout) makes it converge.
+
+test('REGRESSION: feeding neededExtraBottomPadding a self-inflated viewport height diverges without bound', () => {
+  // Models the *old*, buggy onLayout behavior: every reservation's own
+  // growth is fed straight back in as next cycle's viewportHeight, exactly
+  // as FormSheet's flexGrow:0 ScrollView does when nothing stops it.
+  const baselineViewport = 360; // the sheet's real available space, pre-reservation
+  const inputHeight = 100_000; // absurdly tall so it never "fits" within the cycles below, however much the self-inflated viewport grows
+
+  let viewportHeight = baselineViewport;
+  let padding = 0;
+  const paddingHistory: number[] = [];
+
+  for (let cycle = 0; cycle < 5; cycle++) {
+    // Self-inflation: this cycle's "measured" viewport already includes
+    // last cycle's reserved padding, because the ScrollView grew to fit it.
+    viewportHeight = baselineViewport + padding;
+    padding = neededExtraBottomPadding({ inputHeight, viewportHeight });
+    paddingHistory.push(padding);
+  }
+
+  // Strictly increasing every single cycle -- never settles on a repeated
+  // value, which is exactly the "continuously increasing instead of
+  // converging" behavior reported from the device.
+  for (let i = 1; i < paddingHistory.length; i++) {
+    assert.ok(
+      paddingHistory[i] > paddingHistory[i - 1],
+      `expected cycle ${i} (${paddingHistory[i]}) to exceed cycle ${i - 1} (${paddingHistory[i - 1]}) -- divergence stalled`,
+    );
+  }
+  // After 5 cycles of adding a full baseline each time, it's grown far
+  // past anything a single, correct reservation would ever need.
+  assert.ok(paddingHistory[paddingHistory.length - 1] > baselineViewport * 4);
+});
+
+test('REGRESSION: a frozen (non-self-inflated) viewport height converges to a stable padding value immediately', () => {
+  // Models the *fixed* behavior: onLayout ignores any reading taken while
+  // extraBottomPadding is already reserved (isViewportMeasurementTrustworthy),
+  // so viewportHeight never reflects this hook's own reservation.
+  const baselineViewport = 360;
+  const inputHeight = 100_000; // same "never fits" field as the divergence test above, for a direct contrast
+
+  let padding = 0;
+  const paddingHistory: number[] = [];
+
+  for (let cycle = 0; cycle < 5; cycle++) {
+    // onLayout's guard means the baseline never moves, cycle to cycle,
+    // regardless of how much padding is currently reserved.
+    assert.equal(isViewportMeasurementTrustworthy(padding), padding === 0);
+    padding = neededExtraBottomPadding({ inputHeight, viewportHeight: baselineViewport });
+    paddingHistory.push(padding);
+  }
+
+  // Stable from the very first cycle onward -- every later cycle recomputes
+  // the exact same value instead of drifting.
+  assert.ok(paddingHistory.every((value) => value === paddingHistory[0]));
+  assert.equal(paddingHistory[0], baselineViewport);
 });

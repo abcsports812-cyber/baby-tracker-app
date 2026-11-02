@@ -195,3 +195,41 @@ export function clampScrollOffset({ target, contentHeight, viewportHeight }: Cla
 export function isStaleScrollAttempt(attemptGeneration: number, currentGeneration: number): boolean {
   return attemptGeneration !== currentGeneration;
 }
+
+/**
+ * Whether the ScrollView's own `onLayout`-reported height can currently be
+ * trusted as this hook's baseline `viewportHeight`.
+ *
+ * Confirmed from a captured device log: a repeating ~16ms cycle where both
+ * the scroll target (performScroll) and the reported viewport height
+ * (onLayout) grew in lockstep, unbounded, instead of converging. The cause
+ * is a circular dependency specific to FormSheet's sheet layout -- unlike
+ * Screen's ScrollView (`style={flex:1}`, bounded to its parent's allocated
+ * space regardless of content), FormSheet's `body` ScrollView is
+ * `flexGrow: 0` inside a `sheet` that has no `flex: 1` of its own, only a
+ * `maxHeight` cap -- deliberately, so a short form's sheet sizes itself to
+ * its own content instead of always filling 90% of the screen. That means
+ * the ScrollView's own measured height is NOT independent of its content,
+ * and `extraBottomPadding` (reserved by `neededExtraBottomPadding`, see
+ * above) *is* part of that content: adding it grows the ScrollView's own
+ * `onLayout` height by roughly the same amount, below the sheet's cap.
+ *
+ * `neededExtraBottomPadding` returns `viewportHeight` directly whenever the
+ * field doesn't fit. If `viewportHeight` is re-read from `onLayout` *after*
+ * reserving padding, it already reflects that self-inflation, so the next
+ * computation reserves baseline + (already-reserved padding) again --
+ * P(n+1) = baseline + P(n), a divergent recurrence that grows by a fixed
+ * increment every cycle and never converges, instead of being read once,
+ * from a measurement taken before any of this hook's own padding existed.
+ *
+ * Only a reading taken while no extra padding is reserved reflects the
+ * sheet's actual available space, uncontaminated by this hook's own prior
+ * reservation -- onLayout should only update the baseline then. The
+ * baseline is refreshed again the next time extraBottomPadding returns to
+ * 0 (every blur, via clearFocusScroll), which is also when a genuine resize
+ * (keyboard open/close, rotation) that happened while a field was focused
+ * gets picked up.
+ */
+export function isViewportMeasurementTrustworthy(currentExtraBottomPadding: number): boolean {
+  return currentExtraBottomPadding === 0;
+}
