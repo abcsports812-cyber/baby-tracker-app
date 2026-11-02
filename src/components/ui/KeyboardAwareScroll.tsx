@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Keyboard, Platform, ScrollView, View } from 'react-native';
-import { dialogKeyboardAction } from '../../lib/dialogKeyboardInsets';
+import { dialogKeyboardAction, effectiveViewportHeight } from '../../lib/dialogKeyboardInsets';
 import { computeFocusScrollOffset, neededExtraBottomPadding } from '../../lib/keyboardScroll';
 
 export type MeasurableInput = {
@@ -95,6 +95,14 @@ export function useKeyboardAwareScrollRefs() {
   // keyboard reappeared -- e.g. re-tapping an already-focused field, or the
   // keyboard being dismissed and reopened without the field ever blurring.
   const focusedInputRef = useRef<MeasurableInput>(null);
+  // Already in RN logical pixels ("dp"), not raw native pixels -- DialogKeyboardObserver
+  // / DialogKeyboardInsetsView.kt convert exactly once, at the native source, via
+  // PixelUtil.pxToDp(). Set only from handleDialogKeyboardChange's restore path
+  // (FormSheet/Modal), reset in clearFocusScroll. Stays 0 for Screen (never mounts
+  // DialogKeyboardObserver), so this has no effect there -- see
+  // effectiveViewportHeight's doc comment for why it's needed at all: viewportHeightRef
+  // never reflects the keyboard for Modal content.
+  const keyboardHeightRef = useRef(0);
   const [extraBottomPadding, setExtraBottomPaddingState] = useState(0);
 
   const setExtraBottomPadding = useCallback((value: number) => {
@@ -115,7 +123,11 @@ export function useKeyboardAwareScrollRefs() {
       input.measureLayout(
         innerView,
         (_x, y, _width, height) => {
-          const viewportHeight = viewportHeightRef.current;
+          // See effectiveViewportHeight's doc comment: viewportHeightRef alone is the
+          // ScrollView's pre-keyboard layout height and never shrinks for Modal content,
+          // so the keyboard's real height (keyboardHeightRef, Modal-only) must be
+          // subtracted to get the space actually free of the keyboard.
+          const viewportHeight = effectiveViewportHeight(viewportHeightRef.current, keyboardHeightRef.current);
           const needed = neededExtraBottomPadding({ inputHeight: height, viewportHeight });
 
           if (needed !== extraBottomPaddingRef.current) {
@@ -157,6 +169,7 @@ export function useKeyboardAwareScrollRefs() {
     }
     focusedInputRef.current = null;
     pendingInputRef.current = null;
+    keyboardHeightRef.current = 0;
     if (extraBottomPaddingRef.current !== 0) {
       setExtraBottomPadding(0);
     }
@@ -208,10 +221,18 @@ export function useKeyboardAwareScrollRefs() {
   // mechanism (WindowInsets' IME type, observed on a view actually inside
   // the Dialog's own window, not the Activity's decorView).
   const handleDialogKeyboardChange = useCallback(
-    (visible: boolean) => {
+    // heightDp arrives already converted from native pixels to RN logical pixels in
+    // DialogKeyboardInsetsView.kt (via PixelUtil.pxToDp()) -- stored in
+    // keyboardHeightRef as-is, directly comparable to viewportHeightRef (also dp, from
+    // this ScrollView's own onLayout). Do not divide by density again here.
+    (visible: boolean, heightDp: number) => {
       if (dialogKeyboardAction(visible) === 'restore') {
+        // Set before restoreFocusedInput runs, so performScroll's
+        // effectiveViewportHeight call picks up the real height immediately.
+        keyboardHeightRef.current = heightDp;
         restoreFocusedInput();
       } else {
+        // clearFocusScroll already resets keyboardHeightRef to 0.
         clearFocusScroll();
       }
     },

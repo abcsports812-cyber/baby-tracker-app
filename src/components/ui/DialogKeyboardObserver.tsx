@@ -8,7 +8,10 @@ import DialogKeyboardInsetsView from '../../../modules/dialog-keyboard-insets/sr
 import type { KeyboardChangeEventPayload } from '../../../modules/dialog-keyboard-insets/src/DialogKeyboardInsets.types';
 
 interface Props {
-  onKeyboardChange: (visible: boolean) => void;
+  /** `heightDp` arrives already converted from native pixels to React Native logical
+   * pixels ("dp") -- see KeyboardChangeEventPayload's doc comment. Pass it straight
+   * through to KeyboardAwareScroll; do not divide by density again here. */
+  onKeyboardChange: (visible: boolean, heightDp: number) => void;
 }
 
 /**
@@ -17,6 +20,11 @@ interface Props {
  * actually mounted in -- e.g. FormSheet's Modal/Dialog window, which Activity-level
  * keyboard listeners (RN's Keyboard module, Reanimated's useAnimatedKeyboard) can't
  * reliably reach, since both attach to the Activity's own decorView unconditionally.
+ *
+ * Reports both visibility and height (already in RN logical pixels, see
+ * KeyboardChangeEventPayload): the height matters just as much as the boolean --
+ * see effectiveViewportHeight's doc comment (src/lib/dialogKeyboardInsets.ts) for why
+ * KeyboardAwareScroll.tsx can't get the keyboard-avoidance math right without it.
  *
  * Android-only: iOS already gets correct keyboard-avoidance from
  * KeyboardAvoidingView's 'padding' behavior (not Modal-scoped the same way Android's
@@ -31,7 +39,7 @@ export function DialogKeyboardObserver({ onKeyboardChange }: Props) {
     <DialogKeyboardInsetsView
       style={{ width: 0, height: 0 }}
       onKeyboardChange={(event: { nativeEvent: KeyboardChangeEventPayload }) => {
-        onKeyboardChange(event.nativeEvent.visible);
+        onKeyboardChange(event.nativeEvent.visible, event.nativeEvent.heightDp);
       }}
     />
   );

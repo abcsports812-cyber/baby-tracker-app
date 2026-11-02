@@ -14,6 +14,10 @@ export function dialogKeyboardAction(visible: boolean): DialogKeyboardAction {
 
 export interface DialogKeyboardInsetsState {
   visible: boolean | null;
+  /** Raw native pixels, mirroring DialogKeyboardInsetsView.kt's own `lastHeightPx` --
+   * the Kotlin dedupe check happens before the px->dp conversion applied at emission,
+   * so this model dedupes in the same (px) unit. Not the same unit as
+   * effectiveViewportHeight's `keyboardHeightDp` parameter below. */
   height: number;
 }
 
@@ -62,4 +66,42 @@ export function reduceDialogKeyboardInsets(
     state: { visible: reading.visible, height: reading.height },
     event: reading,
   };
+}
+
+/**
+ * The space actually free of the keyboard, for a ScrollView living inside a FormSheet
+ * Modal. `measuredViewportHeight` (the ScrollView's own onLayout height) never shrinks
+ * when the keyboard opens there -- the Modal's Dialog window is forced edge-to-edge
+ * whenever the app-wide edge-to-edge flag is on (see ReactModalHostView.kt's
+ * `navigationBarTranslucent` getter), and under edge-to-edge, SOFT_INPUT_ADJUST_RESIZE
+ * doesn't actually resize the window; the IME only arrives as an inset. So
+ * measuredViewportHeight stays at its pre-keyboard size the entire time the keyboard is
+ * open, stale by exactly the keyboard's height -- this corrects for that using the real
+ * height DialogKeyboardObserver reports, which computeFocusScrollOffset/
+ * neededExtraBottomPadding need in order to target the space that's actually visible,
+ * not the space the ScrollView merely occupies.
+ *
+ * BOTH parameters must already be in React Native logical pixels ("dp"/"points"), the
+ * same unit onLayout/measureLayout/scrollTo use. `keyboardHeightDp` is NOT the raw
+ * value WindowInsetsCompat reports on the native side (that's physical pixels, which
+ * scale with display density and would silently over-subtract here on any device
+ * denser than 1.0x) -- DialogKeyboardInsetsView.kt converts it exactly once, via
+ * PixelUtil.pxToDp(), before it ever reaches JS. Nothing on the JS side should ever
+ * divide it by density again.
+ */
+export function effectiveViewportHeight(measuredViewportHeight: number, keyboardHeightDp: number): number {
+  return Math.max(measuredViewportHeight - keyboardHeightDp, 0);
+}
+
+/**
+ * Pure-TS model of PixelUtil.toDIPFromPixel -- react-native's own px->dp conversion
+ * (`value / density`), the exact formula DialogKeyboardInsetsView.kt applies via its
+ * `pxToDp()` extension before emitting `heightDp`. This doesn't run on-device or
+ * execute that Kotlin code; it exists purely to give the conversion formula itself (and
+ * its density-independence) a regression guard, the same way reduceDialogKeyboardInsets
+ * models the native dedupe logic and clampScrollOffset models native ScrollView
+ * clamping -- none of them run the real native code, only its documented behavior.
+ */
+export function imeHeightPxToDp(imeHeightPx: number, density: number): number {
+  return imeHeightPx / density;
 }

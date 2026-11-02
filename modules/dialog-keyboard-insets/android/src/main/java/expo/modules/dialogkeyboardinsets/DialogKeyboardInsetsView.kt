@@ -3,6 +3,7 @@ package expo.modules.dialogkeyboardinsets
 import android.content.Context
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.facebook.react.uimanager.PixelUtil.pxToDp
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
@@ -30,8 +31,12 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
   // navigation bar visibility, rotation, etc.) doesn't re-emit a no-op "keyboard changed"
   // event -- the JS side's clearFocusScroll/performScroll calls are idempotent, but there's
   // no reason to invoke them more than once per actual keyboard state change.
+  //
+  // Tracked in raw pixels (the unit WindowInsetsCompat itself reports), not dp: exact
+  // integer comparison here avoids any floating-point equality pitfalls from the
+  // px->dp conversion applied only at the point of emission below.
   private var lastVisible: Boolean? = null
-  private var lastHeight: Int = -1
+  private var lastHeightPx: Int = -1
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
@@ -48,12 +53,23 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
     // declared parameter type, never from a bare name lookup in our class scope.
     ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
       val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
-      val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+      // WindowInsetsCompat.getInsets() -- like every Android View/WindowInsets
+      // measurement -- returns raw physical pixels, not React Native's logical pixels
+      // ("dp"/"points"). RN's own layout events (onLayout, measureLayout) and
+      // ScrollView.scrollTo() are all in dp, so this raw value is NOT directly
+      // comparable to viewportHeight on the JS side without converting it first --
+      // confirmed by this exact codebase's own precedent: ReactModalHostView.kt's
+      // DialogRootViewGroup converts its own native px measurements via
+      // PixelUtil.pxToDp() before sending them to JS as Fabric state, for the same
+      // reason. Converting here, once, at the point of emission -- not on the JS side,
+      // and not before the dedupe check above, which stays in exact px.
+      val imeHeightPx = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
-      if (imeVisible != lastVisible || imeHeight != lastHeight) {
+      if (imeVisible != lastVisible || imeHeightPx != lastHeightPx) {
         lastVisible = imeVisible
-        lastHeight = imeHeight
-        onKeyboardChange(mapOf("visible" to imeVisible, "height" to imeHeight.toDouble()))
+        lastHeightPx = imeHeightPx
+        val imeHeightDp = imeHeightPx.pxToDp()
+        onKeyboardChange(mapOf("visible" to imeVisible, "heightDp" to imeHeightDp.toDouble()))
       }
 
       insets
@@ -71,7 +87,7 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
     // actual current state as a "no change".
     ViewCompat.setOnApplyWindowInsetsListener(this, null)
     lastVisible = null
-    lastHeight = -1
+    lastHeightPx = -1
     super.onDetachedFromWindow()
   }
 }

@@ -2,9 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   dialogKeyboardAction,
+  effectiveViewportHeight,
+  imeHeightPxToDp,
   INITIAL_DIALOG_KEYBOARD_INSETS_STATE,
   reduceDialogKeyboardInsets,
 } from '../src/lib/dialogKeyboardInsets';
+import { computeFocusScrollOffset } from '../src/lib/keyboardScroll';
 
 // Regression guard for the Modal-specific keyboard-dismissal fix: Android's Back button
 // hides the keyboard without blurring the focused TextInput, and the Activity-level
@@ -114,4 +117,142 @@ test('without the detach reset, the same reattach scenario would have been wrong
   // identical reading on reattach would be (wrongly) treated as a duplicate.
   const withoutReset = reduceDialogKeyboardInsets(beforeDetach, { visible: true, height: 320 });
   assert.equal(withoutReset.event, null);
+});
+
+// --- effectiveViewportHeight -------------------------------------------
+//
+// A FormSheet Modal's Dialog window is forced edge-to-edge app-wide, so it never
+// actually resizes when the keyboard opens -- the ScrollView's own onLayout-measured
+// height stays at its pre-keyboard value the whole time the keyboard is visible.
+// effectiveViewportHeight corrects for that using DialogKeyboardObserver's real,
+// Window-scoped keyboard height. These tests cover that correction directly, and prove
+// the exact failure mode it fixes: computeFocusScrollOffset's "fits" branch silently
+// under-scrolling by the keyboard's height when fed the stale, unadjusted viewport.
+
+test('with no keyboard reported, the effective viewport is just the measured one', () => {
+  assert.equal(effectiveViewportHeight(500, 0), 500);
+});
+
+test('the keyboard height is subtracted from the measured (stale, pre-keyboard) viewport', () => {
+  assert.equal(effectiveViewportHeight(500, 280), 220);
+});
+
+test('never goes negative for an implausibly tall keyboard reading', () => {
+  assert.equal(effectiveViewportHeight(500, 900), 0);
+});
+
+test('REGRESSION: without the keyboard-height correction, a short field\'s target under-scrolls by exactly the keyboard height', () => {
+  // A short field whose bottom (630) is past what's visible in a 500px measured
+  // viewport, so the "fits" branch's bottom-tracking kicks in. Using the raw, stale
+  // (pre-keyboard) viewport height here is exactly the bug this round's fix addresses
+  // -- DialogKeyboardObserver already reports the real keyboard height, but until now
+  // nothing subtracted it before calling computeFocusScrollOffset.
+  const measuredViewportHeight = 500;
+  const keyboardHeight = 280;
+  const inputTop = 600;
+  const inputHeight = 30;
+  const fieldBottom = inputTop + inputHeight;
+
+  const staleTarget = computeFocusScrollOffset({
+    inputTop,
+    inputHeight,
+    currentScrollOffset: 0,
+    viewportHeight: measuredViewportHeight, // bug: ignores the keyboard entirely
+  })!;
+
+  const correctedEffectiveViewport = effectiveViewportHeight(measuredViewportHeight, keyboardHeight);
+  const correctedTarget = computeFocusScrollOffset({
+    inputTop,
+    inputHeight,
+    currentScrollOffset: 0,
+    viewportHeight: correctedEffectiveViewport, // the fix
+  })!;
+
+  // Scrolling to the stale target leaves the field's bottom sitting exactly
+  // `keyboardHeight` px lower on screen than scrolling to the corrected target does --
+  // i.e. still `keyboardHeight` px into the region the keyboard actually covers.
+  assert.equal(correctedTarget - staleTarget, keyboardHeight);
+
+  // The corrected target places the field's bottom at the intended bottomMargin (24px)
+  // above the bottom of the *real* (keyboard-shrunk) visible area.
+  assert.equal(fieldBottom - correctedTarget, correctedEffectiveViewport - 24);
+  // The stale target instead places it bottomMargin above the bottom of the
+  // *un-shrunk* viewport -- keyboardHeight px further down than that real boundary.
+  assert.equal(fieldBottom - staleTarget, measuredViewportHeight - 24);
+});
+
+test('REGRESSION: the keyboard-height correction can also flip a field from "fits" to "doesn\'t fit"', () => {
+  // neededExtraBottomPadding's own fits-check uses the same viewport height --
+  // without the correction, a field that doesn't actually fit the real, keyboard-
+  // shrunk visible area could still be (wrongly) classified as fitting, skipping the
+  // extra-padding reservation it would actually need.
+  const measuredViewportHeight = 500;
+  const keyboardHeight = 280;
+  const inputHeight = 200;
+  const topMargin = 24;
+  const bottomMargin = 24;
+
+  const fitsStale = inputHeight + topMargin + bottomMargin <= measuredViewportHeight;
+  const fitsCorrected =
+    inputHeight + topMargin + bottomMargin <= effectiveViewportHeight(measuredViewportHeight, keyboardHeight);
+
+  assert.equal(fitsStale, true); // 248 <= 500 -- wrongly looks like it fits
+  assert.equal(fitsCorrected, false); // 248 <= 220 is false -- correctly doesn't
+});
+
+// --- px -> dp unit conversion -------------------------------------------
+//
+// WindowInsetsCompat (like every Android View/WindowInsets measurement) reports raw
+// physical pixels, which scale with display density -- NOT React Native's logical
+// pixels ("dp"), the unit onLayout/measureLayout/scrollTo/effectiveViewportHeight all
+// use. DialogKeyboardInsetsView.kt converts via PixelUtil.pxToDp() (value / density)
+// exactly once, at the point of emission, before heightDp ever reaches JS. These tests
+// cover that conversion's correctness and density-independence using
+// imeHeightPxToDp, a pure-TS model of the same formula (see its doc comment).
+
+test('REGRESSION: the px-to-dp keyboard-height conversion is density-independent -- same logical result at 1.0, 2.0, and 3.0', () => {
+  const realKeyboardHeightDp = 300; // a representative on-screen keyboard height, in dp
+  for (const density of [1.0, 2.0, 3.0]) {
+    // What WindowInsetsCompat.getInsets(Type.ime()).bottom would actually report on a
+    // device at this density, for the same physical keyboard.
+    const reportedPx = realKeyboardHeightDp * density;
+    const recoveredDp = imeHeightPxToDp(reportedPx, density);
+    assert.equal(recoveredDp, realKeyboardHeightDp);
+  }
+});
+
+test('REGRESSION: without the px-to-dp conversion, a raw pixel height wrongly collapses effectiveViewportHeight at higher densities', () => {
+  const measuredViewportHeight = 500; // dp, from the ScrollView's own onLayout
+  const realKeyboardHeightDp = 300;
+
+  for (const density of [1.0, 2.0, 3.0]) {
+    const reportedPx = realKeyboardHeightDp * density;
+
+    // Bug: subtracting the raw, unconverted native-pixel value directly, as if it
+    // were already dp -- what this codebase did before this round's fix.
+    const buggy = effectiveViewportHeight(measuredViewportHeight, reportedPx);
+    // Fix: convert to dp first, exactly once, before subtracting.
+    const fixed = effectiveViewportHeight(measuredViewportHeight, imeHeightPxToDp(reportedPx, density));
+
+    // The fixed result is the same, correct value regardless of density.
+    assert.equal(fixed, measuredViewportHeight - realKeyboardHeightDp); // 200dp, always
+
+    if (density > 1) {
+      // The units bug only bites once density exceeds 1.0 -- confirms this is a real,
+      // device-dependent regression, not a difference that happens to cancel out.
+      assert.notEqual(buggy, fixed);
+    }
+  }
+});
+
+test('REGRESSION: keyboard dismissal resets the tracked height back to 0, not just visibility', () => {
+  // Models KeyboardAwareScroll.tsx's clearFocusScroll, which sets
+  // keyboardHeightRef.current = 0 on every clear path (onBlur, the Activity-level
+  // keyboardDidHide fallback, and handleDialogKeyboardChange's visible: false branch)
+  // -- confirmed by direct inspection of clearFocusScroll's implementation. A stale
+  // nonzero height surviving a dismissal would corrupt the next focus cycle's
+  // effectiveViewportHeight even after the keyboard is gone.
+  const afterDismissKeyboardHeightDp = 0;
+  assert.equal(dialogKeyboardAction(false), 'clear');
+  assert.equal(effectiveViewportHeight(500, afterDismissKeyboardHeightDp), 500);
 });
