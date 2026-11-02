@@ -71,6 +71,12 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         showsVerticalScrollIndicator={false}
+        // See the matching comment in Screen.tsx: Android's native ScrollView
+        // auto-scrolls a focused child into view on its own, independently of
+        // useKeyboardAwareScrollRefs -- disabling it here leaves
+        // useKeyboardAwareScrollRefs as the only system reacting to the
+        // keyboard inside this Modal's own Dialog window too.
+        scrollsChildToFocus={Platform.OS === 'android' ? false : undefined}
         onScroll={onScroll}
         onLayout={onLayout}
         onContentSizeChange={onContentSizeChange}

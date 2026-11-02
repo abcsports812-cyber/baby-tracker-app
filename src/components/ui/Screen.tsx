@@ -53,6 +53,17 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      // Android's native ScrollView auto-scrolls a focused child into view on
+      // its own (RN's ReactScrollView, mScrollsChildToFocus defaults to true --
+      // see requestChildFocus/requestChildRectangleOnScreen in
+      // ReactScrollView.java) independently of useKeyboardAwareScrollRefs,
+      // which does the same thing from JS. Both reacting to the same focus/
+      // keyboard-resize signal is what produced the reported shaking --
+      // disabling the native path leaves useKeyboardAwareScrollRefs as the
+      // only system in control, as this prop's own doc comment intends
+      // ("useful when you want to control the scroll position
+      // programmatically").
+      scrollsChildToFocus={Platform.OS === 'android' ? false : undefined}
       onScroll={onScroll}
       onLayout={onLayout}
       onContentSizeChange={onContentSizeChange}
