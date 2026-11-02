@@ -3,7 +3,7 @@ package expo.modules.dialogkeyboardinsets
 import android.content.Context
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.facebook.react.uimanager.PixelUtil.pxToDp
+import com.facebook.react.uimanager.PixelUtil
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
@@ -59,16 +59,22 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
       // ScrollView.scrollTo() are all in dp, so this raw value is NOT directly
       // comparable to viewportHeight on the JS side without converting it first --
       // confirmed by this exact codebase's own precedent: ReactModalHostView.kt's
-      // DialogRootViewGroup converts its own native px measurements via
-      // PixelUtil.pxToDp() before sending them to JS as Fabric state, for the same
-      // reason. Converting here, once, at the point of emission -- not on the JS side,
-      // and not before the dedupe check above, which stays in exact px.
+      // DialogRootViewGroup converts its own native px measurements the same way
+      // (there via the Int.pxToDp() extension) before sending them to JS as Fabric
+      // state. That extension form doesn't work standalone here, though: it's a member
+      // extension function nested inside `object PixelUtil`, not @JvmStatic, so it
+      // needs PixelUtil itself as an implicit dispatch receiver in scope (e.g. inside a
+      // `with(PixelUtil) { }` block) -- importing just the name and calling
+      // `imeHeightPx.pxToDp()` directly, as this file originally did, doesn't resolve.
+      // PixelUtil.toDIPFromPixel() is the plain @JvmStatic method backing it, callable
+      // directly. Converting here, once, at the point of emission -- not on the JS
+      // side, and not before the dedupe check above, which stays in exact px.
       val imeHeightPx = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
       if (imeVisible != lastVisible || imeHeightPx != lastHeightPx) {
         lastVisible = imeVisible
         lastHeightPx = imeHeightPx
-        val imeHeightDp = imeHeightPx.pxToDp()
+        val imeHeightDp = PixelUtil.toDIPFromPixel(imeHeightPx.toFloat())
         onKeyboardChange(mapOf("visible" to imeVisible, "heightDp" to imeHeightDp.toDouble()))
       }
 
