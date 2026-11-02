@@ -2,6 +2,8 @@ import { useRef } from 'react';
 import { StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { fontSize, palette, radius, spacing } from '../../theme';
 import { useKeyboardAwareScroll } from './KeyboardAwareScroll';
+// TEMPORARY DIAGNOSTIC LOGGING -- see keyboardDiagLog.ts. Remove with it.
+import { kbdLog } from '../../lib/keyboardDiagLog';
 
 interface Props {
   label: string;
@@ -33,12 +35,15 @@ export function FormField({
   // then scroll) is handled there via the ScrollView's own
   // onContentSizeChange, not a timer.
   const handleFocus = () => {
+    kbdLog('FormField:onFocus', { label });
     keyboardAware?.scrollIntoView(inputRef.current);
   };
   const handleContentSizeChange = () => {
+    kbdLog('FormField:onContentSizeChange', { label });
     keyboardAware?.scrollIntoView(inputRef.current);
   };
   const handleBlur = () => {
+    kbdLog('FormField:onBlur', { label });
     keyboardAware?.clearFocusScroll();
   };
 

@@ -1,11 +1,21 @@
 package expo.modules.dialogkeyboardinsets
 
 import android.content.Context
+import android.util.Log
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
+
+// TEMPORARY DIAGNOSTIC LOGGING -- for the still-unresolved Android keyboard
+// shaking investigation. Logs every WindowInsets dispatch this view receives,
+// including ones the existing dedupe below decides NOT to emit to JS, so a
+// device-side `adb logcat -s KBD_DIAG` can show whether this window is
+// redelivering insets repeatedly while the keyboard is simply sitting open
+// (not just during the show/hide transition). Remove this tag and every
+// Log.d call below once the root cause is confirmed from real device logs.
+private const val KBD_DIAG_TAG = "KBD_DIAG"
 
 /**
  * An invisible (0x0, rendered by the JS side with style={width:0,height:0}) marker view.
@@ -36,9 +46,12 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
   // px->dp conversion applied only at the point of emission below.
   private var lastVisible: Boolean? = null
   private var lastHeightPx: Int = -1
+  // TEMPORARY DIAGNOSTIC LOGGING -- see KBD_DIAG_TAG above.
+  private var diagDispatchCount: Int = 0
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
+    Log.d(KBD_DIAG_TAG, "DialogKeyboardInsetsView#${System.identityHashCode(this)} onAttachedToWindow")
     // Passed as a trailing lambda directly to ViewCompat.setOnApplyWindowInsetsListener,
     // rather than built via a named `OnApplyWindowInsetsListener { ... }` SAM-constructor
     // expression stored in a property: this class extends ExpoView -> ... -> View, which
@@ -72,10 +85,20 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
       // dedupe check above, which stays in exact px.
       val imeHeightPx = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
-      if (imeVisible != lastVisible || imeHeightPx != lastHeightPx) {
+      diagDispatchCount += 1
+      val changed = imeVisible != lastVisible || imeHeightPx != lastHeightPx
+      Log.d(
+          KBD_DIAG_TAG,
+          "DialogKeyboardInsetsView#${System.identityHashCode(this)} dispatch=$diagDispatchCount " +
+              "imeVisible=$imeVisible imeHeightPx=$imeHeightPx lastVisible=$lastVisible " +
+              "lastHeightPx=$lastHeightPx changed=$changed",
+      )
+
+      if (changed) {
         lastVisible = imeVisible
         lastHeightPx = imeHeightPx
         val imeHeightDp = imeHeightPx.toFloat() / resources.displayMetrics.density
+        Log.d(KBD_DIAG_TAG, "DialogKeyboardInsetsView emitting onKeyboardChange visible=$imeVisible heightDp=$imeHeightDp")
         onKeyboardChange(mapOf("visible" to imeVisible, "heightDp" to imeHeightDp.toDouble()))
       }
 
@@ -89,6 +112,7 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
   }
 
   override fun onDetachedFromWindow() {
+    Log.d(KBD_DIAG_TAG, "DialogKeyboardInsetsView#${System.identityHashCode(this)} onDetachedFromWindow after $diagDispatchCount dispatches")
     // Detach the listener before the view (and its window) goes away, and reset the
     // dedupe state so a later re-attach doesn't wrongly skip re-announcing the keyboard's
     // actual current state as a "no change".

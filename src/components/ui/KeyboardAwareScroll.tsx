@@ -3,6 +3,8 @@ import { Keyboard, Platform, ScrollView, View } from 'react-native';
 import { dialogKeyboardAction, effectiveViewportHeight } from '../../lib/dialogKeyboardInsets';
 import { computeFocusScrollOffset, isStaleScrollAttempt, neededExtraBottomPadding } from '../../lib/keyboardScroll';
 import { createTrailingDebouncer } from '../../lib/trailingDebouncer';
+// TEMPORARY DIAGNOSTIC LOGGING -- see keyboardDiagLog.ts. Remove with it.
+import { kbdLog } from '../../lib/keyboardDiagLog';
 
 // Android dispatches several intermediate WindowInsets readings while the
 // IME's own show/hide animation is in progress, not just one final value --
@@ -159,6 +161,7 @@ export function useKeyboardAwareScrollRefs() {
           // keyboardHeightRef/extraBottomPaddingRef state. See
           // isStaleScrollAttempt's doc comment.
           if (isStaleScrollAttempt(generation, scrollGenerationRef.current)) {
+            kbdLog('performScroll:stale', { generation, current: scrollGenerationRef.current });
             return;
           }
           // See effectiveViewportHeight's doc comment: viewportHeightRef alone is the
@@ -167,6 +170,17 @@ export function useKeyboardAwareScrollRefs() {
           // subtracted to get the space actually free of the keyboard.
           const viewportHeight = effectiveViewportHeight(viewportHeightRef.current, keyboardHeightRef.current);
           const needed = neededExtraBottomPadding({ inputHeight: height, viewportHeight });
+          kbdLog('performScroll:measured', {
+            generation,
+            y,
+            height,
+            viewportHeight,
+            viewportHeightRaw: viewportHeightRef.current,
+            keyboardHeightRef: keyboardHeightRef.current,
+            needed,
+            currentExtraPadding: extraBottomPaddingRef.current,
+            currentScrollOffset: scrollOffsetRef.current,
+          });
 
           if (needed !== extraBottomPaddingRef.current) {
             // Reserve (or release) scroll headroom first; wait for
@@ -176,6 +190,7 @@ export function useKeyboardAwareScrollRefs() {
             // can tell whether it's still current when it resumes.
             pendingInputRef.current = input;
             pendingGenerationRef.current = generation;
+            kbdLog('performScroll:setExtraBottomPadding', { generation, from: extraBottomPaddingRef.current, to: needed });
             setExtraBottomPadding(needed);
             return;
           }
@@ -192,10 +207,15 @@ export function useKeyboardAwareScrollRefs() {
           // scrollTo can ever reach this point for a given burst of events,
           // so this never stacks overlapping animated scrolls.
           if (target != null) {
+            kbdLog('performScroll:scrollTo', { generation, target, from: scrollOffsetRef.current });
             scrollView.scrollTo({ y: target, animated: true });
+          } else {
+            kbdLog('performScroll:noScrollNeeded', { generation });
           }
         },
-        () => {},
+        () => {
+          kbdLog('performScroll:measureLayoutFailed', { generation });
+        },
       );
     },
     [setExtraBottomPadding],
@@ -208,6 +228,7 @@ export function useKeyboardAwareScrollRefs() {
   const beginScrollAttempt = useCallback(
     (input: MeasurableInput) => {
       scrollGenerationRef.current += 1;
+      kbdLog('beginScrollAttempt', { generation: scrollGenerationRef.current });
       performScroll(input, scrollGenerationRef.current);
     },
     [performScroll],
@@ -223,6 +244,7 @@ export function useKeyboardAwareScrollRefs() {
       // computeFocusScrollOffset's minDelta check makes an already-correct
       // position a no-op), but not necessary, since beginScrollAttempt below
       // already positions the new field immediately.
+      kbdLog('scrollInputIntoView');
       restoreDebouncerRef.current.cancel();
       focusedInputRef.current = input;
       beginScrollAttempt(input);
@@ -257,6 +279,7 @@ export function useKeyboardAwareScrollRefs() {
     if (!scrollView) {
       return;
     }
+    kbdLog('stabilizeScroll', { y: scrollOffsetRef.current });
     scrollView.scrollTo({ y: scrollOffsetRef.current, animated: true });
   }, []);
 
@@ -271,6 +294,7 @@ export function useKeyboardAwareScrollRefs() {
     if (Platform.OS !== 'android') {
       return;
     }
+    kbdLog('clearFocusScroll', { priorExtraPadding: extraBottomPaddingRef.current });
     // Cancel any pending debounced restore and invalidate any in-flight
     // scroll attempt (a measureLayout callback that hasn't resolved yet, or
     // an onContentSizeChange continuation still waiting) so neither can
@@ -303,11 +327,16 @@ export function useKeyboardAwareScrollRefs() {
   // on the next frame; reading it in the same tick risks targeting a
   // position that's about to become invalid once the content shrinks.
   const handleKeyboardHide = useCallback(() => {
+    kbdLog('handleKeyboardHide');
     clearFocusScroll();
-    requestAnimationFrame(stabilizeScroll);
+    requestAnimationFrame(() => {
+      kbdLog('handleKeyboardHide:raf->stabilizeScroll');
+      stabilizeScroll();
+    });
   }, [clearFocusScroll, stabilizeScroll]);
 
   const restoreFocusedInput = useCallback(() => {
+    kbdLog('restoreFocusedInput', { hasFocusedInput: focusedInputRef.current != null });
     if (focusedInputRef.current) {
       beginScrollAttempt(focusedInputRef.current);
     }
@@ -320,6 +349,7 @@ export function useKeyboardAwareScrollRefs() {
   // settled restore attempt using whichever input/height are current once
   // the debounce window elapses, rather than reacting to every reading.
   const scheduleRestore = useCallback(() => {
+    kbdLog('scheduleRestore:scheduled');
     restoreDebouncerRef.current.schedule(restoreFocusedInput);
   }, [restoreFocusedInput]);
 
@@ -357,8 +387,14 @@ export function useKeyboardAwareScrollRefs() {
     if (Platform.OS !== 'android') {
       return undefined;
     }
-    const hideSub = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
-    const showSub = Keyboard.addListener('keyboardDidShow', scheduleRestore);
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      kbdLog('ActivityKeyboard:keyboardDidHide');
+      handleKeyboardHide();
+    });
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      kbdLog('ActivityKeyboard:keyboardDidShow', { height: e?.endCoordinates?.height });
+      scheduleRestore();
+    });
     return () => {
       hideSub.remove();
       showSub.remove();
@@ -402,6 +438,7 @@ export function useKeyboardAwareScrollRefs() {
     // keyboardHeightRef as-is, directly comparable to viewportHeightRef (also dp, from
     // this ScrollView's own onLayout). Do not divide by density again here.
     (visible: boolean, heightDp: number) => {
+      kbdLog('DialogKeyboard:onKeyboardChange', { visible, heightDp });
       if (dialogKeyboardAction(visible) === 'restore') {
         // Set before scheduleRestore's debounced callback runs, so whichever
         // reading is current when it actually fires is the one performScroll's
@@ -421,11 +458,19 @@ export function useKeyboardAwareScrollRefs() {
   );
 
   const onScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+    const y = e.nativeEvent.contentOffset.y;
+    if (Math.abs(y - scrollOffsetRef.current) > 0.5) {
+      kbdLog('onScroll', { from: scrollOffsetRef.current, to: y });
+    }
+    scrollOffsetRef.current = y;
   }, []);
 
   const onLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
-    viewportHeightRef.current = e.nativeEvent.layout.height;
+    const height = e.nativeEvent.layout.height;
+    if (height !== viewportHeightRef.current) {
+      kbdLog('onLayout', { from: viewportHeightRef.current, to: height });
+    }
+    viewportHeightRef.current = height;
   }, []);
 
   // Fires whenever the ScrollView's actual content size changes -- which
@@ -435,7 +480,8 @@ export function useKeyboardAwareScrollRefs() {
   // unrelated content growth (e.g. a multiline field's own onContentSizeChange
   // feeding back here via FormField) -- harmless, since this is a no-op
   // whenever pendingInputRef isn't set.
-  const onContentSizeChange = useCallback(() => {
+  const onContentSizeChange = useCallback((w?: number, h?: number) => {
+    kbdLog('onContentSizeChange', { w, h, hasPendingInput: pendingInputRef.current != null });
     const input = pendingInputRef.current;
     if (!input) {
       return;
