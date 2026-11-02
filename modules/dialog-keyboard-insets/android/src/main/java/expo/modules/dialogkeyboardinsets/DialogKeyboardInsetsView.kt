@@ -3,7 +3,6 @@ package expo.modules.dialogkeyboardinsets
 import android.content.Context
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.facebook.react.uimanager.PixelUtil
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
@@ -57,24 +56,26 @@ class DialogKeyboardInsetsView(context: Context, appContext: AppContext) : ExpoV
       // measurement -- returns raw physical pixels, not React Native's logical pixels
       // ("dp"/"points"). RN's own layout events (onLayout, measureLayout) and
       // ScrollView.scrollTo() are all in dp, so this raw value is NOT directly
-      // comparable to viewportHeight on the JS side without converting it first --
-      // confirmed by this exact codebase's own precedent: ReactModalHostView.kt's
-      // DialogRootViewGroup converts its own native px measurements the same way
-      // (there via the Int.pxToDp() extension) before sending them to JS as Fabric
-      // state. That extension form doesn't work standalone here, though: it's a member
-      // extension function nested inside `object PixelUtil`, not @JvmStatic, so it
-      // needs PixelUtil itself as an implicit dispatch receiver in scope (e.g. inside a
-      // `with(PixelUtil) { }` block) -- importing just the name and calling
-      // `imeHeightPx.pxToDp()` directly, as this file originally did, doesn't resolve.
-      // PixelUtil.toDIPFromPixel() is the plain @JvmStatic method backing it, callable
-      // directly. Converting here, once, at the point of emission -- not on the JS
-      // side, and not before the dedupe check above, which stays in exact px.
+      // comparable to viewportHeight on the JS side without converting it first.
+      //
+      // Converted here via plain Android DisplayMetrics (resources.displayMetrics.density),
+      // not react-native's own PixelUtil: this local Expo module's Gradle compile
+      // classpath (wired by expo-module-gradle-plugin's default dependencies, a
+      // compileOnly dependency on :expo-modules-core only) doesn't expose
+      // com.facebook.react.uimanager.* -- confirmed by two straight EAS build failures
+      // ("Unresolved reference: PixelUtil") despite that class genuinely existing in the
+      // installed react-native package. `density` is defined identically either way
+      // (DisplayMetrics.density is exactly what PixelUtil.toDIPFromPixel itself divides
+      // by internally), so this produces the same dp value without needing any
+      // react-native dependency on this module's classpath at all. Converting here,
+      // once, at the point of emission -- not on the JS side, and not before the
+      // dedupe check above, which stays in exact px.
       val imeHeightPx = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
       if (imeVisible != lastVisible || imeHeightPx != lastHeightPx) {
         lastVisible = imeVisible
         lastHeightPx = imeHeightPx
-        val imeHeightDp = PixelUtil.toDIPFromPixel(imeHeightPx.toFloat())
+        val imeHeightDp = imeHeightPx.toFloat() / resources.displayMetrics.density
         onKeyboardChange(mapOf("visible" to imeVisible, "heightDp" to imeHeightDp.toDouble()))
       }
 
