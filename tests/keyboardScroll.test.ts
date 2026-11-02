@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clampScrollOffset, computeFocusScrollOffset, neededExtraBottomPadding } from '../src/lib/keyboardScroll';
+import { clampScrollOffset, computeFocusScrollOffset, isStaleScrollAttempt, neededExtraBottomPadding } from '../src/lib/keyboardScroll';
 
 // Regression guard for the Notes keyboard bug: typed text becoming hidden
 // as the multiline "Note" body field grows. The real fix lives in
@@ -225,4 +225,60 @@ test('REGRESSION: after padding is cleared (e.g. on keyboard dismissal), reopeni
   const reRequested = neededExtraBottomPadding({ inputHeight, viewportHeight });
   assert.notEqual(reRequested, afterClear);
   assert.equal(reRequested, viewportHeight);
+});
+
+// --- isStaleScrollAttempt -------------------------------------------
+//
+// Regression guard for the Diaper modal shaking bug's self-triggering feedback loop:
+// an older scroll attempt's async measureLayout callback, or its onContentSizeChange
+// continuation, must be discarded once a newer attempt has superseded it -- otherwise
+// it can apply a decision computed against outdated keyboardHeightRef/
+// extraBottomPadding state, re-toggling padding that a newer attempt already settled.
+
+test('a scroll attempt is current (not stale) when its generation matches the latest', () => {
+  assert.equal(isStaleScrollAttempt(3, 3), false);
+});
+
+test('REGRESSION: an older attempt is stale once a newer one has started', () => {
+  // Models an in-flight measureLayout callback (tagged with generation 1) resolving
+  // after a fresh focus or a newer debounced keyboard reading has already minted
+  // generation 2.
+  assert.equal(isStaleScrollAttempt(1, 2), true);
+});
+
+test('REGRESSION: an onContentSizeChange continuation is stale if a clear superseded it', () => {
+  // Models clearFocusScroll bumping the generation (e.g. on keyboard hide) while an
+  // earlier attempt's padding-reservation continuation is still pending.
+  const pendingGeneration = 5;
+  const afterClear = 6; // clearFocusScroll's generation bump
+  assert.equal(isStaleScrollAttempt(pendingGeneration, afterClear), true);
+});
+
+test('REGRESSION: keyboard hide during an active scroll invalidates that scroll\'s own generation', () => {
+  // Models the exact scenario: a field-focus scroll attempt (generation 1) is
+  // animating toward its target when the keyboard is dismissed moments later.
+  // clearFocusScroll bumps the generation (here, to 2) as part of handling that
+  // dismissal -- generation 1's own measureLayout callback, if it's still
+  // in flight, or any onContentSizeChange continuation of it, must now be
+  // recognized as stale so it can't apply a decision for a keyboard state that
+  // no longer holds.
+  const activeScrollGeneration = 1;
+  const afterKeyboardHide = 2; // clearFocusScroll's generation bump
+  assert.equal(isStaleScrollAttempt(activeScrollGeneration, afterKeyboardHide), true);
+});
+
+test('REGRESSION: rapid focus switching across three fields leaves only the last attempt current', () => {
+  // Models the user tapping field A, then quickly B, then quickly C --
+  // beginScrollAttempt mints a fresh generation each time. Every earlier
+  // attempt must be recognized as stale once a later one has started, not
+  // just the immediately-preceding one.
+  let generation = 0;
+  const fieldA = ++generation; // 1
+  const fieldB = ++generation; // 2
+  const fieldC = ++generation; // 3
+  const current = generation; // 3 -- whatever beginScrollAttempt last minted
+
+  assert.equal(isStaleScrollAttempt(fieldA, current), true);
+  assert.equal(isStaleScrollAttempt(fieldB, current), true);
+  assert.equal(isStaleScrollAttempt(fieldC, current), false); // the latest -- still valid
 });

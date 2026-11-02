@@ -16,6 +16,7 @@
     "src/lib/growth.ts",
     "src/lib/keyboardScroll.ts",
     "src/lib/dialogKeyboardInsets.ts",
+    "src/lib/trailingDebouncer.ts",
     "src/types/models.ts",
     "tests/**/*.ts"
   ]

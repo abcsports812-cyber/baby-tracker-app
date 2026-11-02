@@ -50,53 +50,64 @@ export function FormSheet({ visible, title, onClose, onSave, saveLabel = 'Save',
     [scrollInputIntoView, clearFocusScroll],
   );
 
+  const sheetContent = (
+    <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.lg + insets.bottom }]}>
+      {/* Mounted inside this Modal's own Dialog window -- see DialogKeyboardObserver
+          and DialogKeyboardInsetsView.kt for why that placement is what makes its
+          keyboard-visibility signal reliable here, unlike an Activity-level listener. */}
+      <DialogKeyboardObserver onKeyboardChange={handleDialogKeyboardChange} />
+      <View style={styles.handle} />
+      <View style={styles.header}>
+        <Text style={styles.title}>{title}</Text>
+        <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
+          <Ionicons name="close" size={20} color={palette.textSecondary} />
+        </Pressable>
+      </View>
+      <ScrollView
+        ref={scrollRef}
+        innerViewRef={innerViewRef as unknown as React.RefObject<View>}
+        style={styles.body}
+        contentContainerStyle={{ paddingBottom: spacing.xl + extraBottomPadding }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        onLayout={onLayout}
+        onContentSizeChange={onContentSizeChange}
+        scrollEventThrottle={32}
+      >
+        <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
+      </ScrollView>
+      <View style={styles.footer}>
+        <Button label={saveLabel} onPress={onSave} disabled={saveDisabled} fullWidth size="lg" />
+      </View>
+    </View>
+  );
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <KeyboardAvoidingView
+        {Platform.OS === 'ios' ? (
           // 'padding' on iOS reliably shrinks the sheet to the visible
           // space, since iOS keyboard notifications aren't window-scoped.
-          // 'height' on Android is kept as a harmless best-effort fallback
-          // for whatever devices it does work on, but it isn't what
-          // actually fixes the keyboard covering a field here -- see
-          // useKeyboardAwareScrollRefs (KeyboardAwareScroll.tsx) for the
-          // real fix and why this alone can't be trusted on Android.
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.sheetWrap}
-        >
-          <View style={[styles.sheet, shadow.card, Platform.OS === 'android' && { paddingBottom: spacing.lg + insets.bottom }]}>
-            {/* Mounted inside this Modal's own Dialog window -- see DialogKeyboardObserver
-                and DialogKeyboardInsetsView.kt for why that placement is what makes its
-                keyboard-visibility signal reliable here, unlike an Activity-level listener. */}
-            <DialogKeyboardObserver onKeyboardChange={handleDialogKeyboardChange} />
-            <View style={styles.handle} />
-            <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
-              <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-                <Ionicons name="close" size={20} color={palette.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              ref={scrollRef}
-              innerViewRef={innerViewRef as unknown as React.RefObject<View>}
-              style={styles.body}
-              contentContainerStyle={{ paddingBottom: spacing.xl + extraBottomPadding }}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-              showsVerticalScrollIndicator={false}
-              onScroll={onScroll}
-              onLayout={onLayout}
-              onContentSizeChange={onContentSizeChange}
-              scrollEventThrottle={32}
-            >
-              <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
-            </ScrollView>
-            <View style={styles.footer}>
-              <Button label={saveLabel} onPress={onSave} disabled={saveDisabled} fullWidth size="lg" />
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+          <KeyboardAvoidingView behavior="padding" style={styles.sheetWrap}>
+            {sheetContent}
+          </KeyboardAvoidingView>
+        ) : (
+          // Android: no KeyboardAvoidingView at all. Its own 'height'
+          // behavior used to run here as a "harmless best-effort fallback",
+          // but it isn't harmless: it independently listens for the same
+          // keyboardDidShow/keyboardDidHide events useKeyboardAwareScrollRefs
+          // does and, on whatever devices it does manage to fire inside this
+          // Modal, resizes this sheet via its own separate LayoutAnimation at
+          // the same time useKeyboardAwareScrollRefs is separately animating
+          // the ScrollView's content -- two systems moving overlapping
+          // geometry on the same trigger, which is what produced visible
+          // shaking. DialogKeyboardObserver + useKeyboardAwareScrollRefs
+          // (wired above) is the only system that reacts to the keyboard here.
+          <View style={styles.sheetWrap}>{sheetContent}</View>
+        )}
       </View>
     </Modal>
   );

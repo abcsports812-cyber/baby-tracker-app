@@ -16,7 +16,14 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
   // FormSheet modal goes through here -- see KeyboardAwareScroll.tsx for
   // why a focused field needs this rather than relying on
   // ScrollView/KeyboardAvoidingView alone to stay clear of the Android
-  // keyboard.
+  // keyboard. On Android specifically, KeyboardAvoidingView's own
+  // behavior="height" is no longer used at all (see below) -- it isn't
+  // just unnecessary alongside useKeyboardAwareScrollRefs, it actively
+  // conflicts with it: both independently listen for the same Activity-level
+  // keyboardDidShow/keyboardDidHide events and both then animate overlapping
+  // geometry (KeyboardAvoidingView resizes this ScrollView's own parent via
+  // LayoutAnimation; useKeyboardAwareScrollRefs separately animates the
+  // ScrollView's content), which is what produced the reported shaking.
   const {
     scrollRef,
     innerViewRef,
@@ -37,30 +44,42 @@ export function Screen({ children, scroll = true, style, edges = ['top'] }: Prop
   // paddingBottom, so that takes precedence over the default here.
   const basePaddingBottom = (style?.paddingBottom as number | undefined) ?? styles.content.paddingBottom;
 
+  const scrollContent = (
+    <ScrollView
+      ref={scrollRef}
+      innerViewRef={innerViewRef as unknown as React.RefObject<View>}
+      style={styles.flex}
+      contentContainerStyle={[styles.content, style, { paddingBottom: basePaddingBottom + extraBottomPadding }]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      onScroll={onScroll}
+      onLayout={onLayout}
+      onContentSizeChange={onContentSizeChange}
+      scrollEventThrottle={32}
+    >
+      <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
+    </ScrollView>
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
       {scroll ? (
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView
-            ref={scrollRef}
-            innerViewRef={innerViewRef as unknown as React.RefObject<View>}
-            style={styles.flex}
-            contentContainerStyle={[
-              styles.content,
-              style,
-              { paddingBottom: basePaddingBottom + extraBottomPadding },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            onScroll={onScroll}
-            onLayout={onLayout}
-            onContentSizeChange={onContentSizeChange}
-            scrollEventThrottle={32}
-          >
-            <KeyboardAwareScrollProvider value={keyboardAwareApi}>{children}</KeyboardAwareScrollProvider>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        Platform.OS === 'ios' ? (
+          // iOS keyboard notifications aren't window-scoped (no Modal-reach
+          // problem the way Android's are), and 'padding' behavior doesn't
+          // run a second, independently-animated resize of this View the
+          // way Android's 'height' behavior did -- kept exactly as before.
+          <KeyboardAvoidingView style={styles.flex} behavior="padding">
+            {scrollContent}
+          </KeyboardAvoidingView>
+        ) : (
+          // Android: no KeyboardAvoidingView at all. useKeyboardAwareScrollRefs
+          // (scrollInputIntoView/clearFocusScroll via onFocus/onBlur/
+          // onContentSizeChange, wired above) is the only system that reacts
+          // to the keyboard here -- see the doc comment on this component.
+          <View style={styles.flex}>{scrollContent}</View>
+        )
       ) : (
         <View style={[styles.flex, style]}>{children}</View>
       )}

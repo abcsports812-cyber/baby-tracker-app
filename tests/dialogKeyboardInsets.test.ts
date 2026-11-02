@@ -7,7 +7,12 @@ import {
   INITIAL_DIALOG_KEYBOARD_INSETS_STATE,
   reduceDialogKeyboardInsets,
 } from '../src/lib/dialogKeyboardInsets';
-import { computeFocusScrollOffset } from '../src/lib/keyboardScroll';
+import { computeFocusScrollOffset, neededExtraBottomPadding } from '../src/lib/keyboardScroll';
+import { createTrailingDebouncer } from '../src/lib/trailingDebouncer';
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // Regression guard for the Modal-specific keyboard-dismissal fix: Android's Back button
 // hides the keyboard without blurring the focused TextInput, and the Activity-level
@@ -255,4 +260,61 @@ test('REGRESSION: keyboard dismissal resets the tracked height back to 0, not ju
   const afterDismissKeyboardHeightDp = 0;
   assert.equal(dialogKeyboardAction(false), 'clear');
   assert.equal(effectiveViewportHeight(500, afterDismissKeyboardHeightDp), 500);
+});
+
+// --- Diaper modal shaking regression (end-to-end) ------------------------
+//
+// Reproduces the reported bug at the logic level: Android dispatches several
+// intermediate WindowInsets readings while the IME's own show/hide animation is in
+// progress. Diaper's FormSheet is short (ChipSelect + DateTimeRow + one short,
+// near-top "Notes" field, nothing after it) -- exactly the shape where the
+// fits/doesn't-fit boundary neededExtraBottomPadding depends on is most sensitive to
+// a changing viewport, so intermediate readings could flip it back and forth before
+// this round's debounce fix. This combines the real production debouncer
+// (createTrailingDebouncer) with the real padding-decision function
+// (neededExtraBottomPadding) to prove only the final, settled reading is ever acted on.
+
+test('REGRESSION: a ramping sequence of IME-animation height readings (Diaper-style short form) settles into exactly one padding decision', async () => {
+  const diaperMeasuredViewportHeight = 500; // Diaper's short sheet, representative
+  const diaperNotesFieldHeight = 180; // a short multiline field, a few lines of text
+
+  const debouncer = createTrailingDebouncer(15);
+  const decisions: number[] = [];
+
+  // Intermediate readings as the IME slides open, then its final, settled height.
+  const ramp = [40, 90, 150, 210, 260, 280];
+  for (const heightDp of ramp) {
+    debouncer.schedule(() => {
+      const viewportHeight = effectiveViewportHeight(diaperMeasuredViewportHeight, heightDp);
+      decisions.push(neededExtraBottomPadding({ inputHeight: diaperNotesFieldHeight, viewportHeight }));
+    });
+  }
+
+  await wait(30);
+
+  // Exactly one decision was ever made, against the final, settled height -- not
+  // once per intermediate reading, and not the (possibly different) decision an
+  // earlier, now-stale reading would have produced.
+  assert.equal(decisions.length, 1);
+  const settledViewportHeight = effectiveViewportHeight(diaperMeasuredViewportHeight, 280);
+  assert.equal(decisions[0], neededExtraBottomPadding({ inputHeight: diaperNotesFieldHeight, viewportHeight: settledViewportHeight }));
+});
+
+test('REGRESSION: without debouncing, the same ramp would have produced multiple, possibly conflicting padding decisions', () => {
+  // Sanity check on the scenario itself: proves the ramp above genuinely crosses the
+  // fits/doesn't-fit boundary more than once if every reading is acted on immediately
+  // (the pre-fix behavior), not just a difference in degree.
+  const diaperMeasuredViewportHeight = 500;
+  const diaperNotesFieldHeight = 180;
+  const ramp = [40, 90, 150, 210, 260, 280];
+
+  const immediateDecisions = ramp.map((heightDp) =>
+    neededExtraBottomPadding({
+      inputHeight: diaperNotesFieldHeight,
+      viewportHeight: effectiveViewportHeight(diaperMeasuredViewportHeight, heightDp),
+    }),
+  );
+
+  const distinctDecisions = new Set(immediateDecisions);
+  assert.ok(distinctDecisions.size > 1, 'expected the un-debounced ramp to cross the fits/doesn\'t-fit boundary at least once');
 });

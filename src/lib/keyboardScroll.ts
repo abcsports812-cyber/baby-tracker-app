@@ -173,3 +173,25 @@ export function clampScrollOffset({ target, contentHeight, viewportHeight }: Cla
   const maxScrollOffset = Math.max(contentHeight - viewportHeight, 0);
   return Math.min(Math.max(target, 0), maxScrollOffset);
 }
+
+/**
+ * Whether a scroll attempt tagged with `attemptGeneration` has been
+ * superseded by a newer one and should be discarded rather than acted on.
+ *
+ * KeyboardAwareScroll.tsx's performScroll measures the focused field via an
+ * async `measureLayout` call that crosses the native bridge -- a newer
+ * attempt (a fresh focus, a newer debounced keyboard-height reading, or a
+ * keyboard dismissal) can start, and even finish, before an older attempt's
+ * callback resolves. Acting on that stale callback anyway would apply a
+ * scroll/padding decision computed against outdated state. The same check
+ * also guards onContentSizeChange's deferred continuation of an earlier
+ * attempt (one that reserved extra padding and is waiting for that layout
+ * change to land before actually scrolling): if a newer attempt has started
+ * in the meantime, that continuation is stale too -- the newer attempt
+ * already supersedes it and will make its own decision from scratch, so
+ * re-running the stale one would only re-introduce the exact
+ * self-triggering padding/scroll feedback loop this exists to prevent.
+ */
+export function isStaleScrollAttempt(attemptGeneration: number, currentGeneration: number): boolean {
+  return attemptGeneration !== currentGeneration;
+}
